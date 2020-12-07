@@ -55,21 +55,21 @@ namespace instance.id.TommyExtensions
                 {
                     switch (prop.PropertyType)
                     {
-                        case { } a when a == typeof(int):
+                        case System.Type a when a == typeof(int):
                             tomlData[prop.Name] = new TomlInteger
                             {
                                 Comment = comment,
                                 Value = Convert.ToInt32(propValue)
                             };
                             break;
-                        case { } a when a == typeof(ulong):
+                        case System.Type a when a == typeof(ulong):
                             tomlData[prop.Name] = new TomlInteger
                             {
                                 Comment = comment,
                                 Value = Convert.ToInt64(propValue)
                             };
                             break;
-                        case { } a when a == typeof(float):
+                        case System.Type a when a == typeof(float):
                             float floatValue = (float) propValue;
                             tomlData[prop.Name] = new TomlFloat
                             {
@@ -77,14 +77,14 @@ namespace instance.id.TommyExtensions
                                 Value = Convert.ToDouble(floatValue.ToString(formatter))
                             };
                             break;
-                        case { } a when a == typeof(double):
+                        case System.Type a when a == typeof(double):
                             tomlData[prop.Name] = new TomlFloat
                             {
                                 Comment = comment,
                                 Value = Convert.ToDouble(propValue)
                             };
                             break;
-                        case { } a when a == typeof(decimal):
+                        case System.Type a when a == typeof(decimal):
                             tomlData[prop.Name] = new TomlFloat
                             {
                                 Comment = comment,
