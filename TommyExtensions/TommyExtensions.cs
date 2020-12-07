@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Tommy;
+
 // ReSharper disable ClassNeverInstantiated.Global
 
 // ReSharper disable PatternAlwaysOfType
@@ -52,7 +53,7 @@ namespace instance.id.TommyExtensions
                     tomlData[prop.Name] = new TomlString
                     {
                         Comment = comment,
-                        Value = prop.GetValue(data)?.ToString()
+                        Value = prop.GetValue(data)?.ToString() ?? ""
                     };
                     continue;
                 }
@@ -65,14 +66,14 @@ namespace instance.id.TommyExtensions
                             tomlData[prop.Name] = new TomlInteger
                             {
                                 Comment = comment,
-                                Value = Convert.ToInt32(propValue)
+                                Value = Convert.ToInt32(propValue ?? 0)
                             };
                             break;
                         case Type a when a == typeof(ulong):
                             tomlData[prop.Name] = new TomlInteger
                             {
                                 Comment = comment,
-                                Value = Convert.ToInt64(propValue)
+                                Value = Convert.ToInt64(propValue ?? 0)
                             };
                             break;
                         case Type a when a == typeof(float):
@@ -80,21 +81,21 @@ namespace instance.id.TommyExtensions
                             tomlData[prop.Name] = new TomlFloat
                             {
                                 Comment = comment,
-                                Value = Convert.ToDouble(floatValue.ToString(formatter))
+                                Value = Convert.ToDouble(floatValue.ToString(formatter) ?? "")
                             };
                             break;
                         case Type a when a == typeof(double):
                             tomlData[prop.Name] = new TomlFloat
                             {
                                 Comment = comment,
-                                Value = Convert.ToDouble(propValue)
+                                Value = Convert.ToDouble(propValue ?? 0)
                             };
                             break;
                         case Type a when a == typeof(decimal):
                             tomlData[prop.Name] = new TomlFloat
                             {
                                 Comment = comment,
-                                Value = Convert.ToDouble(propValue)
+                                Value = Convert.ToDouble(propValue ?? 0)
                             };
                             break;
                     }
@@ -203,7 +204,9 @@ namespace instance.id.TommyExtensions
         /// <summary>
         /// Designates a property to be ignored by the Tommy processor
         /// </summary>
-        public TommyIgnore() { }
+        public TommyIgnore()
+        {
+        }
     }
 
     #endregion

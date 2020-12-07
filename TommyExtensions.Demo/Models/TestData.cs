@@ -12,7 +12,7 @@ namespace instance.id.TommyExtensions.Demo
     {
         [TommyComment(" Comment for string property\n Testing second line comment")]
         public string TestStringComment { get; set; } = "Test String";
-        public string TestString { get; set; } = "Test String";
+        public string TestString { get; set; }
 
         [TommyComment(@" Comment testing multiline verbatim strings #1
          Comment testing multiline verbatim strings #2
