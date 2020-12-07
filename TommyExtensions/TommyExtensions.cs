@@ -48,6 +48,16 @@ namespace instance.id.TommyExtensions
 
                 // -- Check each property type in order to
                 // -- determine which type of TomlNode to create
+                if (prop.PropertyType == typeof(bool))
+                {
+                    tomlData[prop.Name] = new TomlBoolean
+                    {
+                        Comment = comment,
+                        Value = (bool) prop.GetValue(data)
+                    };
+                    continue;
+                }
+
                 if (prop.PropertyType == typeof(string))
                 {
                     tomlData[prop.Name] = new TomlString

@@ -19,6 +19,10 @@ namespace instance.id.TommyExtensions.Demo
          Comment testing multiline verbatim strings #3")]
         public string TestComment { get; set; } = "Test String";
 
+        [TommyComment(" Comment for bool property")]
+        public bool TestBoolComment { get; set; } = true;
+        public bool TestBool { get; set; }
+
         [TommyComment(" Comment for int property")]
         public int TestIntComment { get; set; } = 1;
         public int TestInt { get; set; } = 1;
