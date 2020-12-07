@@ -10,7 +10,7 @@ namespace instance.id.TommyExtensions
     public static class TommyExtensions
     {
         /// <summary>
-        /// Reflectively determines the property types of the passed class instance and outputs a Toml file
+        /// Reflectively determines the property types and values of the passed class instance and outputs a Toml file
         /// </summary>
         /// <param name="data">The class instance in which the properties will be used to create a Toml file </param>
         /// <param name="path">The destination path in which to create the Toml file</param>
