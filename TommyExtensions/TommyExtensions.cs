@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -63,10 +64,10 @@ namespace instance.id.TommyExtensions
                             };
                             break;
                         case { } a when a == typeof(ulong):
-                            tomlData[prop.Name] = new TomlFloat
+                            tomlData[prop.Name] = new TomlInteger
                             {
                                 Comment = comment ?? null,
-                                Value = Convert.ToDouble(propValue)
+                                Value = Convert.ToInt64(propValue)
                             };
                             break;
                         case { } a when a == typeof(float):

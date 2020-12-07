@@ -19,8 +19,8 @@ namespace instance.id.TommyExtensions.Demo
         public int TestInt { get; set; } = 1;
 
         [TommyComment(" Comment for ulong property")]
-        public ulong TestUlongComment { get; set; } = 12345678901234567890;
-        public ulong TestUlong { get; set; } = 12345678901234567890;
+        public ulong TestUlongComment { get; set; } = 448543646457048970;
+        public ulong TestUlong { get; set; } = 448543646457048970;
 
         [TommyComment(" Comment for float property")]
         public float TestFloatComment { get; set; } = 123.123f;
