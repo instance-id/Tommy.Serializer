@@ -20,6 +20,11 @@ namespace instance.id.TommyExtensions.Demo
     #region Extension Helper
     public static class ConfigurationUtils
     {
+        /// <summary>
+        /// Check whether the application is running in debug mode in order to determine where to export the file
+        /// </summary>
+        /// <param name="config">The string name of the output file to create</param>
+        /// <returns>The full path in which the file will be created</returns>
         public static string DeterminePath(this string config)
         {
             var path = "";

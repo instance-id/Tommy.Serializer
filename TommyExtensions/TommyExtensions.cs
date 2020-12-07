@@ -9,21 +9,33 @@ namespace instance.id.TommyExtensions
 {
     public static class TommyExtensions
     {
+        /// <summary>
+        /// Reflectively determines the property types of the passed class instance and outputs a Toml file
+        /// </summary>
+        /// <param name="data">The class instance in which the properties will be used to create a Toml file </param>
+        /// <param name="path">The destination path in which to create the Toml file</param>
+        /// <param name="debug">If enabled, shows property values - Will be removed when development is completed</param>
         public static void ToTomlFile(object data, string path, bool debug = false)
         {
             TomlTable tomlTable = new TomlTable();
             TomlTable tomlData = new TomlTable();
             Type t = data.GetType();
 
-            var tableName = t.GetCustomAttribute<TommyTableName>()?.Value;
+            // -- Check object for table name attribute ------------------
+            var tableName = t.GetCustomAttribute<TommyTableName>()?.TableName;
 
+            // -- Iterate the properties of the object -------------------
             PropertyInfo[] props = t.GetProperties();
             foreach (var prop in props)
             {
                 if (debug) Console.WriteLine($"Prop: Name {prop.Name} Type: {prop.PropertyType} Value: {data.GetPropertyValue(prop.Name)}");
                 var propValue = data.GetPropertyValue(prop.Name);
+
+                // -- Check if property has comment attribute ------------
                 var comment = prop.GetCustomAttribute<TommyComment>()?.Value;
 
+                // -- Check each property type in order to
+                // -- determine which type of TomlNode to create
                 if (prop.PropertyType == typeof(string))
                 {
                     tomlData[prop.Name] = new TomlString
@@ -46,7 +58,7 @@ namespace instance.id.TommyExtensions
                             };
                             break;
                         case { } a when a == typeof(ulong):
-                            tomlData[prop.Name] = new TomlFloat()
+                            tomlData[prop.Name] = new TomlFloat
                             {
                                 Comment = comment ?? null,
                                 Value = Convert.ToDouble(propValue)
@@ -87,7 +99,10 @@ namespace instance.id.TommyExtensions
                         for (var i = 0; i < val.Count; i++)
                         {
                             var value = val[i];
+                            if (value == null) continue;
+
                             if (debug) Console.WriteLine($"    CollectionValue index:{i.ToString()}: {value}");
+
                             var valueType = value.GetType();
 
                             if (valueType.IsNumerical())
@@ -105,6 +120,7 @@ namespace instance.id.TommyExtensions
 
             if (debug) Console.WriteLine(tomlTable.ToString());
 
+            // -- Writes the Toml file to disk ---------------------------
             using (StreamWriter writer = new StreamWriter(File.OpenWrite(path)))
             {
                 tomlTable.WriteTo(writer);
@@ -148,15 +164,23 @@ namespace instance.id.TommyExtensions
     {
         public string Value { get; }
 
+        /// <summary>
+        /// Adds a toml comment to a property or field
+        /// </summary>
+        /// <param name="comment">String value which will be used as a comment for the property/field</param>
         public TommyComment(string comment) => Value = comment;
     }
 
     [AttributeUsage(AttributeTargets.Class)]
     public class TommyTableName : Attribute
     {
-        public string Value { get; }
+        public string TableName { get; }
 
-        public TommyTableName(string fieldName) => Value = fieldName;
+        /// <summary>
+        /// Designates a class as a Toml Table and applies all contained properties as children of that table
+        /// </summary>
+        /// <param name="tableName">String value which will be used as the Toml Table name</param>
+        public TommyTableName(string tableName) => TableName = tableName;
     }
 
     #endregion
