@@ -10,9 +10,14 @@ namespace instance.id.TommyExtensions.Demo
     [TommyTableName("nametest")]
     public class TestData
     {
-        [TommyComment(" Comment for string property")]
+        [TommyComment(" Comment for string property\n Testing second line comment")]
         public string TestStringComment { get; set; } = "Test String";
         public string TestString { get; set; } = "Test String";
+
+        [TommyComment(@" Comment testing multiline verbatim strings #1
+         Comment testing multiline verbatim strings #2
+         Comment testing multiline verbatim strings #3")]
+        public string TestComment { get; set; } = "Test String";
 
         [TommyComment(" Comment for int property")]
         public int TestIntComment { get; set; } = 1;
