@@ -10,8 +10,11 @@ namespace instance.id.TommyExtensions.Demo
     [TommyTableName("nametest")]
     public class TestData
     {
-        [TommyComment(" Comment for string property\n Testing second line comment")]
+        [TommyComment(" Comment for string property\n Testing second line comment\n" +
+                      "This and subsequent items should appear after the sorted properties")]
         public string TestStringComment { get; set; } = "Test String";
+
+        [TommyComment(@" This item should be a blank string : Testing null value")]
         public string TestString { get; set; }
 
         [TommyComment(@" Comment testing multiline verbatim strings #1
@@ -27,11 +30,15 @@ namespace instance.id.TommyExtensions.Demo
         public int TestIntComment { get; set; } = 1;
         public int TestInt { get; set; } = 1;
 
-        [TommyComment(" Comment for ulong property")]
+        [TommySortOrder(1)]
+        [TommyComment(@" Comment for ulong property  
+         This item should appear second as it's sort order is : 1")]
         public ulong TestUlongComment { get; set; } = 448543646457048970;
         public ulong TestUlong { get; set; } = 448543646457048970;
 
-        [TommyComment(" Comment for float property")]
+        [TommySortOrder(2)]
+        [TommyComment(@" Comment for float property 
+         This item should appear third as it's sort order is : 2")]
         public float TestFloatComment { get; set; } = 123.123f;
         public float TestFloat { get; set; } = 123.123f;
 
@@ -45,9 +52,12 @@ namespace instance.id.TommyExtensions.Demo
 
         [TommyComment(" Comment for IntArray property")]
         public int[] TestIntArrayComment { get; set; } = new[] {1, 2, 3, 4};
+
+        [TommySortOrder(0)]
+        [TommyComment(@" This item should appear first as it's sort order is : 0")]
         public int[] TestIntArray { get; set; } = new[] {1, 2, 3, 4};
 
-        [TommyComment(" Comment for List<string> property")]
+        [TommyComment(@" Comment for List<string> property")]
         public List<string> TestStringListComment { get; set; } = new List<string> {"string1", "string2", "string3"};
         public List<string> TestStringList { get; set; } = new List<string> {"string1", "string2", "string3"};
 
