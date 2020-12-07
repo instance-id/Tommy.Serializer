@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -46,8 +45,8 @@ namespace instance.id.TommyExtensions
                 {
                     tomlData[prop.Name] = new TomlString
                     {
-                        Comment = comment ?? null,
-                        Value = prop.GetValue(data).ToString()
+                        Comment = comment,
+                        Value = prop.GetValue(data)?.ToString()
                     };
                     continue;
                 }
@@ -59,35 +58,36 @@ namespace instance.id.TommyExtensions
                         case { } a when a == typeof(int):
                             tomlData[prop.Name] = new TomlInteger
                             {
-                                Comment = comment ?? null,
+                                Comment = comment,
                                 Value = Convert.ToInt32(propValue)
                             };
                             break;
                         case { } a when a == typeof(ulong):
                             tomlData[prop.Name] = new TomlInteger
                             {
-                                Comment = comment ?? null,
+                                Comment = comment,
                                 Value = Convert.ToInt64(propValue)
                             };
                             break;
                         case { } a when a == typeof(float):
+                            float floatValue = (float) propValue;
                             tomlData[prop.Name] = new TomlFloat
                             {
-                                Comment = comment ?? null,
-                                Value = Convert.ToDouble(propValue)
+                                Comment = comment,
+                                Value = Convert.ToDouble(floatValue.ToString(formatter))
                             };
                             break;
                         case { } a when a == typeof(double):
                             tomlData[prop.Name] = new TomlFloat
                             {
-                                Comment = comment ?? null,
+                                Comment = comment,
                                 Value = Convert.ToDouble(propValue)
                             };
                             break;
                         case { } a when a == typeof(decimal):
                             tomlData[prop.Name] = new TomlFloat
                             {
-                                Comment = comment ?? null,
+                                Comment = comment,
                                 Value = Convert.ToDouble(propValue)
                             };
                             break;
@@ -99,7 +99,7 @@ namespace instance.id.TommyExtensions
                 if (prop.PropertyType.IsClass && prop.PropertyType.GetInterfaces().Contains(typeof(IEnumerable)))
                 {
                     var val = propValue as IList;
-                    var tomlArray = new TomlArray {Comment = comment ?? null};
+                    var tomlArray = new TomlArray {Comment = comment};
 
                     if (val != null)
                         for (var i = 0; i < val.Count; i++)
@@ -135,6 +135,8 @@ namespace instance.id.TommyExtensions
         }
 
         #region Extension Methods
+
+        private static readonly string formatter = "0." + new string('#', 60);
 
         private static bool IsNumerical(this Type type)
         {
