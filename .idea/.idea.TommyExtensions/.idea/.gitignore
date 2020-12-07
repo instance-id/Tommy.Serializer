@@ -1,0 +1,13 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Rider ignored files
+/.idea.TommyExtension.iml
+/contentModel.xml
+/projectSettingsUpdater.xml
+/modules.xml
+# Datasource local storage ignored files
+/../../../../../../../../:\GitHub\instance-id\TommyExtension\TommyExtension\.idea\.idea.TommyExtension\.idea/dataSources/
+/dataSources.local.xml
+# Editor-based HTTP Client requests
+/httpRequests/
