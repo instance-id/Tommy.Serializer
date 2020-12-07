@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Tommy;
+// ReSharper disable ClassNeverInstantiated.Global
 
 // ReSharper disable PatternAlwaysOfType
 namespace instance.id.TommyExtensions
@@ -36,6 +37,10 @@ namespace instance.id.TommyExtensions
             {
                 if (debug) Console.WriteLine($"Prop: Name {prop.Name} Type: {prop.PropertyType} Value: {data.GetPropertyValue(prop.Name)}");
                 var propValue = data.GetPropertyValue(prop.Name);
+
+                // -- Check if property is to be ignored -----------------
+                // -- If so, continue on to the next property ------------
+                if (Attribute.IsDefined(prop, typeof(TommyIgnore))) continue;
 
                 // -- Check if property has comment attribute ------------
                 var comment = prop.GetCustomAttribute<TommyComment>()?.Value;
@@ -190,6 +195,15 @@ namespace instance.id.TommyExtensions
         /// </summary>
         /// <param name="tableName">String value which will be used as the Toml Table name</param>
         public TommyTableName(string tableName) => TableName = tableName;
+    }
+
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+    public class TommyIgnore : Attribute
+    {
+        /// <summary>
+        /// Designates a property to be ignored by the Tommy processor
+        /// </summary>
+        public TommyIgnore() { }
     }
 
     #endregion

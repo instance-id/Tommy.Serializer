@@ -41,5 +41,8 @@ namespace instance.id.TommyExtensions.Demo
         [TommyComment(" Comment for List<string> property")]
         public List<string> TestStringListComment { get; set; } = new List<string> {"string1", "string2", "string3"};
         public List<string> TestStringList { get; set; } = new List<string> {"string1", "string2", "string3"};
+
+        [TommyIgnore]
+        public string TestIgnoreProperty { get; set; } = "I should not show up in the created file";
     }
 }
