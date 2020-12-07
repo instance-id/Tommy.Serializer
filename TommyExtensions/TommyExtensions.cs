@@ -25,129 +25,136 @@ namespace instance.id.TommyExtensions
         /// <param name="debug">If enabled, shows property values - Will be removed when development is completed</param>
         public static void ToTomlFile(object data, string path, bool debug = false)
         {
-            TomlTable tomlTable = new TomlTable();
-            TomlTable tomlData = new TomlTable();
-            Type t = data.GetType();
-
-            // -- Check object for table name attribute ------------------
-            var tableName = t.GetCustomAttribute<TommyTableName>()?.TableName;
-
-            // -- Iterate the properties of the object -------------------
-            PropertyInfo[] props = t.GetProperties();
-            foreach (var prop in props)
+            try
             {
-                if (debug) Console.WriteLine($"Prop: Name {prop.Name} Type: {prop.PropertyType} Value: {data.GetPropertyValue(prop.Name)}");
-                var propValue = data.GetPropertyValue(prop.Name);
+                TomlTable tomlTable = new TomlTable();
+                TomlTable tomlData = new TomlTable();
+                Type t = data.GetType();
 
-                // -- Check if property is to be ignored -----------------
-                // -- If so, continue on to the next property ------------
-                if (Attribute.IsDefined(prop, typeof(TommyIgnore))) continue;
+                // -- Check object for table name attribute ------------------
+                var tableName = t.GetCustomAttribute<TommyTableName>()?.TableName;
 
-                // -- Check if property has comment attribute ------------
-                var comment = prop.GetCustomAttribute<TommyComment>()?.Value;
-
-                // -- Check each property type in order to
-                // -- determine which type of TomlNode to create
-                if (prop.PropertyType == typeof(bool))
+                // -- Iterate the properties of the object -------------------
+                PropertyInfo[] props = t.GetProperties();
+                foreach (var prop in props)
                 {
-                    tomlData[prop.Name] = new TomlBoolean
-                    {
-                        Comment = comment,
-                        Value = (bool) prop.GetValue(data)
-                    };
-                    continue;
-                }
+                    // -- Check if property is to be ignored -----------------
+                    // -- If so, continue on to the next property ------------
+                    if (Attribute.IsDefined(prop, typeof(TommyIgnore))) continue;
 
-                if (prop.PropertyType == typeof(string))
-                {
-                    tomlData[prop.Name] = new TomlString
-                    {
-                        Comment = comment,
-                        Value = prop.GetValue(data)?.ToString() ?? ""
-                    };
-                    continue;
-                }
+                    // -- Check if property has comment attribute ------------
+                    var comment = prop.GetCustomAttribute<TommyComment>()?.Value;
 
-                if (prop.PropertyType.IsNumerical())
-                {
-                    switch (prop.PropertyType)
+                    if (debug) Console.WriteLine($"Prop: Name {prop.Name} Type: {prop.PropertyType} Value: {data.GetPropertyValue(prop.Name)}");
+                    var propValue = data.GetPropertyValue(prop.Name);
+
+                    // -- Check each property type in order to
+                    // -- determine which type of TomlNode to create
+                    if (prop.PropertyType == typeof(bool))
                     {
-                        case Type a when a == typeof(int):
-                            tomlData[prop.Name] = new TomlInteger
-                            {
-                                Comment = comment,
-                                Value = Convert.ToInt32(propValue ?? 0)
-                            };
-                            break;
-                        case Type a when a == typeof(ulong):
-                            tomlData[prop.Name] = new TomlInteger
-                            {
-                                Comment = comment,
-                                Value = Convert.ToInt64(propValue ?? 0)
-                            };
-                            break;
-                        case Type a when a == typeof(float):
-                            float floatValue = (float) propValue;
-                            tomlData[prop.Name] = new TomlFloat
-                            {
-                                Comment = comment,
-                                Value = Convert.ToDouble(floatValue.ToString(formatter) ?? "")
-                            };
-                            break;
-                        case Type a when a == typeof(double):
-                            tomlData[prop.Name] = new TomlFloat
-                            {
-                                Comment = comment,
-                                Value = Convert.ToDouble(propValue ?? 0)
-                            };
-                            break;
-                        case Type a when a == typeof(decimal):
-                            tomlData[prop.Name] = new TomlFloat
-                            {
-                                Comment = comment,
-                                Value = Convert.ToDouble(propValue ?? 0)
-                            };
-                            break;
+                        tomlData[prop.Name] = new TomlBoolean
+                        {
+                            Comment = comment,
+                            Value = (bool) prop.GetValue(data)
+                        };
+                        continue;
                     }
 
-                    continue;
-                }
+                    if (prop.PropertyType == typeof(string))
+                    {
+                        tomlData[prop.Name] = new TomlString
+                        {
+                            Comment = comment,
+                            Value = prop.GetValue(data)?.ToString() ?? ""
+                        };
+                        continue;
+                    }
 
-                if (prop.PropertyType.IsClass && prop.PropertyType.GetInterfaces().Contains(typeof(IEnumerable)))
-                {
+                    if (prop.PropertyType.IsNumerical())
+                    {
+                        switch (prop.PropertyType)
+                        {
+                            case Type a when a == typeof(int):
+                                tomlData[prop.Name] = new TomlInteger
+                                {
+                                    Comment = comment,
+                                    Value = Convert.ToInt32(propValue ?? 0)
+                                };
+                                break;
+                            case Type a when a == typeof(ulong):
+                                tomlData[prop.Name] = new TomlInteger
+                                {
+                                    Comment = comment,
+                                    Value = Convert.ToInt64(propValue ?? 0)
+                                };
+                                break;
+                            case Type a when a == typeof(float):
+                                var floatValue = (float) propValue;
+                                tomlData[prop.Name] = new TomlFloat
+                                {
+                                    Comment = comment,
+                                    Value = Convert.ToDouble(floatValue.ToString(formatter) ?? "0")
+                                };
+                                break;
+                            case Type a when a == typeof(double):
+                                tomlData[prop.Name] = new TomlFloat
+                                {
+                                    Comment = comment,
+                                    Value = Convert.ToDouble(propValue ?? 0)
+                                };
+                                break;
+                            case Type a when a == typeof(decimal):
+                                tomlData[prop.Name] = new TomlFloat
+                                {
+                                    Comment = comment,
+                                    Value = Convert.ToDouble(propValue ?? 0)
+                                };
+                                break;
+                        }
+
+                        continue;
+                    }
+
+                    if (!prop.PropertyType.IsClass || !prop.PropertyType.GetInterfaces().Contains(typeof(IEnumerable))) continue;
+
                     var val = propValue as IList;
                     var tomlArray = new TomlArray {Comment = comment};
 
                     if (val != null)
                         for (var i = 0; i < val.Count; i++)
                         {
-                            var value = val[i];
-                            if (value == null) continue;
+                            if (val[i] == null) throw new ArgumentNullException($"Error: collection value cannot be null");
+                            if (debug) Console.WriteLine($"    CollectionValue index:{i.ToString()}: {val[i]}");
 
-                            if (debug) Console.WriteLine($"    CollectionValue index:{i.ToString()}: {value}");
-
-                            var valueType = value.GetType();
+                            var valueType = val[i].GetType();
 
                             if (valueType.IsNumerical())
-                                tomlArray.Add(new TomlInteger {Value = (int) value});
+                                tomlArray.Add(new TomlInteger {Value = (int) val[i]});
 
                             if (valueType == typeof(string))
-                                tomlArray.Add(new TomlString {Value = value as string});
+                                tomlArray.Add(new TomlString {Value = val[i] as string});
                         }
 
                     tomlData[prop.Name] = tomlArray;
                 }
+
+                if (!string.IsNullOrEmpty(tableName)) tomlTable[tableName] = tomlData;
+                else tomlTable = tomlData;
+
+                if (debug) Console.WriteLine(tomlTable.ToString());
+
+
+                // -- Writes the Toml file to disk ---------------------------
+                using (StreamWriter writer = new StreamWriter(File.OpenWrite(path)))
+                {
+                    tomlTable.WriteTo(writer);
+                    writer.Flush();
+                }
             }
-
-            if (!string.IsNullOrEmpty(tableName)) tomlTable[tableName] = tomlData;
-
-            if (debug) Console.WriteLine(tomlTable.ToString());
-
-            // -- Writes the Toml file to disk ---------------------------
-            using (StreamWriter writer = new StreamWriter(File.OpenWrite(path)))
+            catch (Exception e)
             {
-                tomlTable.WriteTo(writer);
-                writer.Flush();
+                Console.WriteLine(e);
+                throw;
             }
         }
 
