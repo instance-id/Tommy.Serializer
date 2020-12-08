@@ -12,8 +12,8 @@ using System.Reflection;
 using Tommy;
 
 // ReSharper disable ClassNeverInstantiated.Global
-
 // ReSharper disable PatternAlwaysOfType
+
 namespace instance.id.TommyExtensions
 {
     public static class TommyExtensions
@@ -182,7 +182,6 @@ namespace instance.id.TommyExtensions
                         var val = propValue as IList;
                         var tomlArray = new TomlArray {Comment = comment};
 
-
                         if (val != null)
                             for (var i = 0; i < val.Count; i++)
                             {
@@ -206,7 +205,10 @@ namespace instance.id.TommyExtensions
                         });
                     }
 
-                    // -- Check if sorting needs to be done to properties ----
+                    // -- Check if sorting needs to be done to properties. ---
+                    // -- Properties that do not have a sort attribute are ---
+                    // -- given a sort order of the max sort int +1 and ------
+                    // -- appear after the sorted properties -----------------
                     var maxSortInt = (from l in tomlData select l.SortOrder).Max();
                     if (maxSortInt > -1)
                     {
