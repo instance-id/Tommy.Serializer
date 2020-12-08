@@ -19,10 +19,13 @@ namespace instance.id.TommyExtensions.Demo
             var path2 = "TestData2.toml".DeterminePath();
             var pathCombined = "TestDataCombined.toml".DeterminePath();
 
-            TommyExtensions.ToTomlFile(testData, path);
-            TommyExtensions.ToTomlFile(testData2, path2);
-            TommyExtensions.ToTomlFile(new object[] {testData, testData2}, pathCombined);
-        }
+            // TommyExtensions.ToTomlFile(testData, path);
+            // TommyExtensions.ToTomlFile(testData2, path2);
+            // TommyExtensions.ToTomlFile(new object[] {testData, testData2}, pathCombined);
+
+            TestData loadTestData  = TommyExtensions.FromTomlFile<TestData>(path);
+            Console.WriteLine(loadTestData.TestUlong);
+         }
     }
 
     #region Extension Helper

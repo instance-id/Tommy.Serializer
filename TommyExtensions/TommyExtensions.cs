@@ -258,6 +258,136 @@ namespace instance.id.TommyExtensions
             }
         }
 
+        public static T FromTomlFile<T>(string path, bool debug = false) where T : class, new()
+        {
+            try
+            {
+                TomlTable table;
+                T dataClass = new T();
+
+                using (StreamReader reader = new StreamReader(File.OpenRead(path)))
+                {
+                    using (TOMLParser parser = new TOMLParser(reader))
+                        table = parser.Parse();
+                }
+
+                var tableName = typeof(T).GetCustomAttribute<TommyTableName>()?.TableName ?? typeof(T).Name;
+                var properties = typeof(T).GetProperties();
+
+                var tableData = table[tableName];
+                var tableKeys = tableData.Keys.ToList();
+                if (debug) Console.WriteLine($"tableData: {tableData}");
+
+                for (var k = 0; k < tableKeys.Count; k++)
+                {
+                    var key = tableKeys[k];
+                    if (debug) Console.WriteLine($"Property: {key} Value: {tableData[key]} Get Val {tableData[key].TryGetNode(key, out var node)} Node: {node}");
+                    if (!tableData[key].HasValue) continue;
+
+                    if (tableData[key].IsBoolean)
+                        dataClass.SetPropertyValue(key, (bool) tableData[key].AsBoolean.Value);
+                    if (tableData[key].IsString)
+                        dataClass.SetPropertyValue(key, tableData[key].AsString.Value);
+                    if (tableData[key].IsFloat)
+                    {
+                        var propertyTypeCode = Convert.GetTypeCode(properties.FirstOrDefault(x => x.Name == key));
+                        switch (propertyTypeCode)
+                        {
+                            case TypeCode.Single:
+                                dataClass.SetPropertyValue(key, Convert.ToSingle(tableData[key].AsFloat.Value));
+                                break;
+                        }
+                    }
+
+                    if (tableData[key].IsInteger)
+                    {
+                        var propertyTypeCode = Convert.GetTypeCode(properties.FirstOrDefault(x => x.Name == key));
+                        switch (propertyTypeCode)
+                        {
+                            case TypeCode.Int32:
+                                dataClass.SetPropertyValue(key, Convert.ToInt32(tableData[key].AsInteger.Value));
+                                break;
+                            case TypeCode.UInt64:
+                                dataClass.SetPropertyValue(key, Convert.ToUInt64(tableData[key].AsInteger.Value));
+                                break;
+                            case TypeCode.Double:
+                                dataClass.SetPropertyValue(key, Convert.ToDouble(tableData[key].AsInteger.Value));
+                                break;
+                            case TypeCode.Decimal:
+                                dataClass.SetPropertyValue(key, Convert.ToDecimal(tableData[key].AsInteger.Value));
+                                break;
+                            case TypeCode.Int64:
+                                dataClass.SetPropertyValue(key, Convert.ToInt64(tableData[key].AsInteger.Value));
+                                break;
+
+                            #region Not Used Yet
+
+                            case TypeCode.Empty:
+                                break;
+                            case TypeCode.Object:
+                                break;
+                            case TypeCode.DBNull:
+                                break;
+                            case TypeCode.Boolean:
+                                break;
+                            case TypeCode.Char:
+                                break;
+                            case TypeCode.SByte:
+                                break;
+                            case TypeCode.Byte:
+                                break;
+                            case TypeCode.Int16:
+                                break;
+                            case TypeCode.UInt16:
+                                break;
+                            case TypeCode.UInt32:
+                                break;
+                            case TypeCode.Single:
+                                break;
+                            case TypeCode.DateTime:
+                                break;
+                            case TypeCode.String:
+                                break;
+
+                            #endregion
+
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+
+                    if (tableData[key].IsDateTime)
+                        dataClass.SetPropertyValue(key, tableData[key].AsDateTime.Value);
+                    if (tableData[key].IsArray)
+                    {
+                        var itemList = new List<object>();
+                        var values = tableData[key].AsArray;
+                        for (int i = 0; i < values.ChildrenCount; i++)
+                        {
+                            if (debug) Console.WriteLine($"GetType: {values[i].GetType()}");
+                            if (tableData[key][i].IsBoolean)
+                                itemList.Add(tableData[key][i].AsBoolean);
+                            if (tableData[key][i].IsString)
+                                itemList.Add(tableData[key][i].AsString);
+                            if (tableData[key][i].IsFloat)
+                                itemList.Add(tableData[key][i].AsFloat);
+                            if (tableData[key][i].IsInteger)
+                                itemList.Add(tableData[key][i].AsInteger);
+                            if (tableData[key][i].IsDateTime)
+                                itemList.Add(tableData[key][i].AsDateTime);
+                        }
+                    }
+                }
+
+                return dataClass;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
         #region Extension Methods
 
         private static readonly string formatter = "0." + new string('#', 60);
@@ -284,6 +414,14 @@ namespace instance.id.TommyExtensions
             BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public)
         {
             return src.GetType().GetProperty(propName, bindingAttr)?.GetValue(src, null);
+        }
+
+        public static void SetPropertyValue<T>(
+            this object src,
+            string propName, T propValue,
+            BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public)
+        {
+            src.GetType().GetProperty(propName, bindingAttr)?.SetValue(src, propValue);
         }
 
         public static IEnumerable<T> ForEach<T>(this IEnumerable<T> source, Action<T> action)
