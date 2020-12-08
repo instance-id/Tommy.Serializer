@@ -14,15 +14,18 @@ namespace instance.id.TommyExtensions.Demo
         static void Main(string[] args)
         {
             var testData = new TestData();
+            var testData2 = new TestData2();
             var path = "TestData.toml".DeterminePath();
+            var path2 = "TestData2.toml".DeterminePath();
 
             TommyExtensions.ToTomlFile(testData, path);
-
-            Console.WriteLine($"File saved to: {path}");
+            TommyExtensions.ToTomlFile(testData2, path2);
+            // TommyExtensions.ToTomlFile(new object[] {testData, testData2}, path);
         }
     }
 
     #region Extension Helper
+
     public static class ConfigurationUtils
     {
         /// <summary>
@@ -39,9 +42,15 @@ namespace instance.id.TommyExtensions.Demo
                     ? Path.Combine(Directory.GetCurrentDirectory(), "../../../", config)
                     : Path.Combine(Directory.GetCurrentDirectory(), config);
             }
-            catch (Exception ex) { Console.WriteLine(ex); throw; }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                throw;
+            }
+
             return Path.GetFullPath(path);
         }
     }
+
     #endregion
 }
