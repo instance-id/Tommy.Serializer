@@ -9,7 +9,7 @@ The primary goal of this library is to add automatic serialization/deserializati
 ## Installation
 
 Currently, to install this extension either download the [extensions file](https://github.com/instance-id/TommyExtensions/blob/main/TommyExtensions/TommyExtensions.cs)
-and add it to your project, or create a new C# script in your project and simply copy and paste the contents of the script. 
+and add it to your project, or create a new C# script in your project and simply copy and paste the contents of the script.
 I may look into making a nuget package of it as well.
 ## Components
 
@@ -22,13 +22,14 @@ I may look into making a nuget package of it as well.
 <td> Attribute </td> <td> Usage </td> <td> Result </td>
 </tr>
 <tr>
-<td valign="top" style="padding-top: 25px"> TommyTableName </td>
+<a name="tommytablename"></a>
+<td valign="top" style="padding-top: 25px"> TommyTableName   </td>
 <td valign="top">
 
 ```c#
 // Designates a class as a Toml Table and applies all 
 // contained properties as children of that table
-[TommyTableName("tablename")]
+[TommyTableName("mytablename")]
 public class TestData { //... }
 ```
 
@@ -36,7 +37,7 @@ public class TestData { //... }
 <td valign="top">
 
 ```toml
-[tablename]
+[mytablename]
 
 
   
@@ -126,6 +127,7 @@ public string TestIgnoreProperty { get; set; }
 
 ## Usage
 
+### Single Data Object to File
 ```c#
 using instance.id.TommyExtensions;
 
@@ -135,9 +137,33 @@ string path = "path/to/TestData.toml";
 TommyExtensions.ToTomlFile(testData, path);
 ```
 
+### Multiple Data Objects to Single File
+#### NOTE: When outputting multiple data objects to a single file, while not required, it is advised that each data class utilize the [\[TommyTableName\]](#tommytablename) attribute to encapsulate the data under the proper table (primarily so that you can choose their table name). If the attribute is omitted, the object's type name is used as the table name automatically.
+
+```c#
+var testData = new TestData();
+var testData2 = new TestData2();
+var path = "path/to/TestData.toml";
+
+TommyExtensions.ToTomlFile(new object[] {testData, testData2}, path);
+```
+
+### Multiple Data Objects to Multiple Files
+
+```c#
+var testData = new TestData();
+var path = "path/to/TestData.toml";
+
+var testData2 = new TestData2();
+var path2 = "path/to/TestData2.toml";
+
+TommyExtensions.ToTomlFile(testData, path);
+TommyExtensions.ToTomlFile(testData, path2);
+```
+
 ## Included Example
 
-If you download the complete solution from this repo and run the Demo project, it will use the following data class and produce the output file seen below that. 
+If you download the complete solution from this repo and run the Demo project, it will use the following data class and produce the output file seen below that.
 
 <details>
 <summary>Data Class</summary>
