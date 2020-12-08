@@ -15,18 +15,20 @@ namespace instance.id.TommyExtensions.Demo
         {
             var testData = new TestData();
             var testData2 = new TestData2();
-            var path = "TestData.toml".DeterminePath();
-            var path2 = "TestData2.toml".DeterminePath();
+            // var path = "TestData.toml".DeterminePath();
+            // var path2 = "TestData3.toml".DeterminePath();
+            var pathCombined = "TestDataCombined.toml".DeterminePath();
 
-            TommyExtensions.ToTomlFile(testData, path);
-            TommyExtensions.ToTomlFile(testData2, path2);
-            // TommyExtensions.ToTomlFile(new object[] {testData, testData2}, path);
+            // TommyExtensions.ToTomlFile(testData, path, false, false);
+            // TommyExtensions.ToTomlFile(testData2, path2);
+            TommyExtensions.ToTomlFile(new object[] {testData, testData2}, pathCombined);
+
         }
     }
 
     #region Extension Helper
 
-    public static class ConfigurationUtils
+    public static class FileUtils
     {
         /// <summary>
         /// Check whether the application is running in debug mode in order to determine where to export the file

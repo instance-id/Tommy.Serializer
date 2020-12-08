@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -292,52 +293,81 @@ namespace instance.id.TommyExtensions
                     throw;
                 }
 
-            try
+            string firstString = null;
+            string secondString = null;
+            if (updateExisting)
             {
-                /*if (updateExisting)
+                var tmpPath = path;
+                var splitPath = tmpPath.Split(Path.DirectorySeparatorChar);
+                var tmpFile = splitPath[splitPath.Length - 1];
+                tmpPath = tmpPath.Replace(tmpFile, "tmptoml.toml");
+                try
                 {
-                    IEnumerable<string> readLines;
-                    var tmpPath = path;
-                    var splitPath = tmpPath.Split(Path.DirectorySeparatorChar);
-                    var tmpFile = splitPath[splitPath.Length - 1];
-                    tmpPath = tmpPath.Replace(tmpFile, "tmptoml.toml");
-
-                    try
+                    if (File.Exists(path))
                     {
-                        using (StreamWriter writer = new StreamWriter(File.OpenWrite(tmpPath)))
+                        List<string> fileToml = new List<string>();
+                        var memoryToml = new List<string>();
+
+                        fileToml = File.ReadLines(path).ToList();
+
+                        MemoryStream streamMem = new MemoryStream();
+                        using (StreamWriter writer = new StreamWriter(streamMem))
                         {
                             tomlTable.WriteTo(writer);
                             writer.Flush();
                         }
 
-                        if (File.Exists(tmpPath))
-                            readLines = File.ReadLines(tmpPath);
+                        using (var stream = new MemoryStream(streamMem.ToArray(), false))
+                        using (var reader = new StreamReader(stream))
+                        {
+                            string input;
+
+                            while ((input = reader.ReadLine()) != null)
+                                memoryToml.Add(input);
+                        }
+
+                        memoryToml.ForEach(x => { });
+
+                        memoryToml.ForEach(x => { firstString += $"{x}\n"; });
+                        fileToml.ForEach(x => { secondString += $"{x}\n"; });
+                        Console.WriteLine($"Memory Stream: {firstString}");
                     }
-                    catch (Exception e)
+                    else
                     {
-                        Console.WriteLine(e);
-                        throw;
+                        // -- Writes the Toml file to disk -----------------------
+                        using (StreamWriter writer = new StreamWriter(path, false))
+                        {
+                            tomlTable.WriteTo(writer);
+                            writer.Flush();
+                        }
+
+                        Console.WriteLine($"File saved to: {path}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+            }
+            else
+            {
+                try
+                {
+                    // -- Writes the Toml file to disk -----------------------
+                    using (StreamWriter writer = new StreamWriter(path, false))
+                    {
+                        tomlTable.WriteTo(writer);
+                        writer.Flush();
                     }
 
-
-                    Console.WriteLine($"Path: {tmpPath}");
-                }*/
-
-                // -- Writes the Toml file to disk -----------------------
-                using (StreamWriter writer = new StreamWriter(File.OpenWrite(path)))
-                {
-                    // writer.BaseStream.
-                    tomlTable.WriteTo(writer);
-                    writer.Flush();
+                    Console.WriteLine($"File saved to: {path}");
                 }
-
-                Console.WriteLine($"File saved to: {path}");
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
             }
         }
 
