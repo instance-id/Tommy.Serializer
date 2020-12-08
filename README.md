@@ -106,11 +106,7 @@ public string TestIgnoreProperty { get; set; }
 <td valign="top">
 
 ```toml
-# Sort order 0
-TestFloat0 = 123.123
-
-# Sort order 1
-TestFloat1 = 234.234
+ 
 ```
 
 </td>
