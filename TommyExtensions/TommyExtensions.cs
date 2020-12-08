@@ -263,18 +263,6 @@ namespace instance.id.TommyExtensions
 
     #region Attribute Classes
 
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public class TommyComment : Attribute
-    {
-        public string Value { get; }
-
-        /// <summary>
-        /// Adds a toml comment to a property or field
-        /// </summary>
-        /// <param name="comment">String value which will be used as a comment for the property/field</param>
-        public TommyComment(string comment) => Value = comment;
-    }
-
     [AttributeUsage(AttributeTargets.Class)]
     public class TommyTableName : Attribute
     {
@@ -287,14 +275,25 @@ namespace instance.id.TommyExtensions
         public TommyTableName(string tableName) => TableName = tableName;
     }
 
-    /// <inheritdoc />
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+    public class TommyComment : Attribute
+    {
+        public string Value { get; }
+
+        /// <summary>
+        /// Adds a toml comment to a property or field
+        /// </summary>
+        /// <param name="comment">String value which will be used as a comment for the property/field</param>
+        public TommyComment(string comment) => Value = comment;
+    }
+
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class TommySortOrder : Attribute
     {
         public int SortOrder { get; }
 
         /// <summary>
-        /// Designates a property to be ignored by the Tommy processor
+        /// Determines the order in which the properties will be written to file, sorted by numeric value with 0 being the first entry but below the table name (if applicable).
         /// </summary>
         /// <param name="sortOrder">Int value representing the order in which this item will appear in the Toml file</param>
         public TommySortOrder(int sortOrder = -1) => SortOrder = sortOrder;
