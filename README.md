@@ -37,6 +37,9 @@ public class TestData { //... }
 
 ```toml
 [tablename]
+
+
+
 ```
 
 </td>
@@ -58,6 +61,7 @@ public string TestString {  get; set; }  = "Test String"
 ```toml
 # Comment for string property
 TestString = "Test String"
+
 ```
 
 </td>
@@ -87,6 +91,9 @@ TestFloat0 = 123.123
 
 # Sort order 1
 TestFloat1 = 234.234
+
+
+
 ```
 
 </td>
@@ -107,6 +114,8 @@ public string TestIgnoreProperty { get; set; }
 
 ```toml
  
+
+
 ```
 
 </td>
