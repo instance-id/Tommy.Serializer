@@ -4,7 +4,7 @@
 #### NOTE: Work in progress. Not quite fully featured/functional yet.
 The primary goal of this library is to add automatic serialization/deserialization of a class instance to the [Tommy Toml library](https://github.com/dezhidki/Tommy).
 
-##### At the current moment, serializing an instance of a class/data model of properties will/should work with most primary data types.
+##### At the current moment, serializing an instance of a class/data model of properties will/should work with most primary data types. Deserialization back from file to a class instance will come next.
 
 ## Installation
 
