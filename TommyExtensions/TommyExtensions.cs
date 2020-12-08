@@ -241,9 +241,8 @@ namespace instance.id.TommyExtensions
             try
             {
                 // -- Writes the Toml file to disk -----------------------
-                using (StreamWriter writer = new StreamWriter(File.OpenWrite(path)))
+                using (StreamWriter writer = new StreamWriter(path, false))
                 {
-                    // writer.BaseStream.
                     tomlTable.WriteTo(writer);
                     writer.Flush();
                 }
