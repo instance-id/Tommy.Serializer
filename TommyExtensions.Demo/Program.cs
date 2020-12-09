@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 
 namespace instance.id.TommyExtensions.Demo
 {
@@ -13,25 +14,39 @@ namespace instance.id.TommyExtensions.Demo
     {
         static void Main(string[] args)
         {
-            var testData = new TestData();
-            var testData2 = new TestData2();
-            var path = "TestData.toml".DeterminePath();
-            var path2 = "TestData2.toml".DeterminePath();
-            var pathCombined = "TestDataCombined.toml".DeterminePath();
+            // var testData = new TestData();
+            // var testData2 = new TestData2();
+            // var path2 = "TestData2.toml".DeterminePath();
+            // var pathCombined = "TestDataCombined.toml".DeterminePath();
 
             // TommyExtensions.ToTomlFile(testData, path);
             // TommyExtensions.ToTomlFile(testData2, path2);
             // TommyExtensions.ToTomlFile(new object[] {testData, testData2}, pathCombined);
 
-            TestData loadTestData  = TommyExtensions.FromTomlFile<TestData>(path);
-            Console.WriteLine(loadTestData.TestUlong);
+            var path = "TestDataNoDefault.toml".DeterminePath();
+            TestDataNoDefault loadTestData  = TommyExtensions.FromTomlFile<TestDataNoDefault>(path);
+
+            string classData = null;
+            var props = loadTestData.GetType().GetProperties();
+            foreach (var prop in props)
+                classData += $"Name: {prop.Name} Value: {loadTestData.GetPropertyValue(prop.Name)}\n";
+
+            Console.WriteLine(classData);
          }
     }
 
     #region Extension Helper
 
-    public static class ConfigurationUtils
+    public static class Utilities
     {
+        public static object GetPropertyValue(
+            this object src,
+            string propName,
+            BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public)
+        {
+            return src.GetType().GetProperty(propName, bindingAttr)?.GetValue(src, null);
+        }
+
         /// <summary>
         /// Check whether the application is running in debug mode in order to determine where to export the file
         /// </summary>
