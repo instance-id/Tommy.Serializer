@@ -35,7 +35,7 @@ namespace instance.id.TommyExtensions.Demo
          }
     }
 
-    #region Extension Helper
+    #region Demo Helpers
 
     public static class Utilities
     {

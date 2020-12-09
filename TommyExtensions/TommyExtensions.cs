@@ -8,8 +8,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Net.Mime;
 using System.Reflection;
 using Tommy;
 
@@ -25,11 +23,9 @@ namespace instance.id.TommyExtensions
         /// </summary>
         /// <param name="data">The class instance in which the properties will be used to create a Toml file </param>
         /// <param name="path">The destination path in which to create the Toml file</param>
-        /// <param name="updateExisting"></param>
-        /// <param name="debug">If enabled, shows property values - Will be removed when development is completed</param>
-        public static void ToTomlFile(object data, string path, bool updateExisting = false, bool debug = false)
+        public static void ToTomlFile(object data, string path)
         {
-            ToTomlFile(new[] {data}, path, updateExisting, debug);
+            ToTomlFile(new[] {data}, path);
         }
 
         /// <summary>
@@ -37,9 +33,7 @@ namespace instance.id.TommyExtensions
         /// </summary>
         /// <param name="datas">The class instances in which the properties will be used to create a Toml file </param>
         /// <param name="path">The destination path in which to create the Toml file</param>
-        /// <param name="updateExisting"></param>
-        /// <param name="debug">If enabled, shows property values - Will be removed when development is completed</param>
-        public static void ToTomlFile(object[] datas, string path, bool updateExisting = false, bool debug = false)
+        public static void ToTomlFile(object[] datas, string path)
         {
             if (datas == null || datas.Length == 0)
             {
@@ -73,8 +67,6 @@ namespace instance.id.TommyExtensions
                         // -- Check if property has comment attribute ------------
                         var comment = prop.GetCustomAttribute<TommyComment>()?.Value;
                         var sortOrder = prop.GetCustomAttribute<TommySortOrder>()?.SortOrder;
-
-                        if (debug) Console.WriteLine($"Prop: Name {prop.Name} Type: {prop.PropertyType} Value: {data.GetPropertyValue(prop.Name)}");
                         var propValue = data.GetPropertyValue(prop.Name);
 
                         // -- Check each property type in order to
@@ -188,7 +180,6 @@ namespace instance.id.TommyExtensions
                             for (var i = 0; i < val.Count; i++)
                             {
                                 if (val[i] == null) throw new ArgumentNullException($"Error: collection value cannot be null");
-                                if (debug) Console.WriteLine($"    CollectionValue index:{i.ToString()}: {val[i]}");
 
                                 var valueType = val[i].GetType();
 
@@ -232,8 +223,6 @@ namespace instance.id.TommyExtensions
                         if (isMultiObject) tomlTable[type.Name] = tomlDataTable;
                         tomlTable.Add(tomlDataTable);
                     }
-
-                    if (debug) Console.WriteLine(tomlTable.ToString());
                 }
                 catch (Exception e)
                 {
@@ -260,18 +249,16 @@ namespace instance.id.TommyExtensions
             }
         }
 
-        public static T FromTomlFile<T>(string path, bool debug = false) where T : class, new()
+        public static T FromTomlFile<T>(string path) where T : class, new()
         {
             try
             {
                 TomlTable table;
                 var dataClass = Activator.CreateInstance<T>();
 
-                Console.WriteLine($"   dataClass: {dataClass.GetType().Name} {dataClass.GetType().IsInstanceOfType(typeof(T))}");
                 using (StreamReader reader = new StreamReader(File.OpenRead(path)))
                 {
-                    using (TOMLParser parser = new TOMLParser(reader))
-                        table = parser.Parse();
+                    using (TOMLParser parser = new TOMLParser(reader)) { table = parser.Parse(); }
                 }
 
                 var tableName = typeof(T).GetCustomAttribute<TommyTableName>()?.TableName ?? typeof(T).Name;
@@ -279,91 +266,28 @@ namespace instance.id.TommyExtensions
 
                 var tableData = table[tableName];
                 var tableKeys = tableData.Keys.ToList();
-                if (debug) Console.WriteLine($"tableData: {tableData}");
 
                 for (var k = 0; k < tableKeys.Count; k++)
                 {
                     var key = tableKeys[k];
                     var propertyType = properties.FirstOrDefault(x => x.Name == key)?.PropertyType;
 
-                    if (debug) Console.WriteLine($"Property: {key} Value: {tableData[key]}");
                     if (!tableData[key].HasValue) continue;
 
-                    if (tableData[key].IsBoolean)
-                        dataClass.SetPropertyValue(key, tableData[key].AsBoolean.Value);
-                    if (tableData[key].IsString)
-                        dataClass.SetPropertyValue(key, tableData[key].AsString.Value);
-                    if (tableData[key].IsFloat)
+                    if (!tableData[key].IsArray)
+                        dataClass.SetPropertyValue(key, GetValueByType(tableData[key], propertyType));
+                    else
                     {
-                        dataClass.SetPropertyValue(key, Convert.ChangeType(tableData[key].AsFloat.Value, propertyType ?? throw new InvalidOperationException()));
-                    }
+                        if (propertyType?.GetInterface(nameof(IEnumerable)) == null) continue;
 
-                    if (tableData[key].IsInteger)
-                    {
-                        dataClass.SetPropertyValue(key, Convert.ChangeType(tableData[key].AsInteger.Value, propertyType ?? throw new InvalidOperationException()));
-                    }
-
-                    if (tableData[key].IsDateTime)
-                        dataClass.SetPropertyValue(key, tableData[key].AsDateTime.Value);
-                    if (tableData[key].IsArray)
-                    {
-                        TypeCode typeCode = TypeCode.String;
-                        TypeCode arrayArgType = TypeCode.String;
-                        Type itemsType = typeof(string);
-                        Type[] genericArguments;
+                        var valueType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
+                        if (valueType == null) { Console.WriteLine($"Warning: Could not find argument type for property: {propertyType.Name}."); continue; }
 
                         var array = tableData[key].AsArray.RawArray.ToArray();
-                        var nodeVal = new Object[array.Length];
 
-                        var arrayType = array.GetType();
-                        Console.WriteLine($"  arrayType: {arrayType}");
-
-                        // -------------------------------------------
-                        if (!(arrayType is null) && propertyType.GetInterface(nameof(IEnumerable)) != null)
-                        {
-                            var valueType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
-                            Console.WriteLine($"  valueType: {valueType} propertyType {propertyType}");
-
-                            if (valueType != null && valueType.GetInterface(typeof(IConvertible).Name) != null)
-                                dataClass.SetPropertyValue(key, CreateGeneric.Collection(array, typeCode, valueType, propertyType));
-
-                            // var arrayOfT = nodeVal.CreateArrayOfT(typeCode);
-                            // return dataClass;
-                            // -------------------------------------------
-
-                            // if (!(propertyType is null))
-                            // {
-                            //     if (propertyType.IsArray)
-                            //         itemsType = propertyType.GetElementType();
-                            //     else if (propertyType.IsGenericType
-                            //              && (genericArguments = propertyType.GetGenericArguments()).Length > 0
-                            //              && IsAssignableToGenericEnumerable(propertyType, genericArguments[0]))
-                            //     {
-                            //         itemsType = genericArguments[0];
-                            //     }
-                            //
-                            //     if (itemsType == typeof(string))
-                            //     {
-                            //         for (var i = 0; i < array.Length; i++)
-                            //         {
-                            //             nodeVal[i] = array[i].GetNodeValue(arrayArgType);
-                            //         }
-                            //     }
-                            //     else
-                            //     {
-                            //         for (var i = 0; i < array.Length; i++)
-                            //         {
-                            //             arrayArgType = Convert.GetTypeCode(itemsType);
-                            //             nodeVal[i] = array[i].GetNodeValue(arrayArgType);
-                            //             typeCode = Convert.GetTypeCode(arrayArgType);
-                            //             Console.WriteLine($"    ArrayNode: {nodeVal[i]} Node Type: {nodeVal[i].GetType()}");
-                            //         }
-                            //     }
-                            // }
-                            //
-                            // var arrayOfT = nodeVal.CreateArrayOfT(typeCode);
-                            // dataClass.SetPropertyValue(key, arrayOfT);
-                        }
+                        if (valueType.GetInterface(nameof(IConvertible)) != null)
+                            dataClass.SetPropertyValue(key, CreateGeneric.Collection(array, valueType, propertyType));
+                        else Console.WriteLine($"Warning: {valueType.Name} is not able to be converted.");
                     }
                 }
 
@@ -378,64 +302,6 @@ namespace instance.id.TommyExtensions
 
         #region Extension Methods
 
-        private static T[] ConvertArrayTo<T>(T t, Object[] objElems)
-        {
-            return Array.ConvertAll<Object, T>(objElems, obj => (T) obj);
-        }
-        // private static T[] CreateArray<T>(Object[] objectArray)
-        // {
-        //     return Array.ConvertAll<object, T>(objectArray.ToArray(), (o) => (T) Convert(o.ToString(), out var val) ? val : -1);
-        // }
-
-        static bool IsAssignableToGenericEnumerable(Type genericType, Type itemsType)
-        {
-            var iEnumerableInterface = genericType.GetInterface(typeof(IEnumerable<>).Name);
-            return iEnumerableInterface != null;
-        }
-
-        public static Type ResolveType(TypeCode typeCode)
-        {
-            switch (typeCode) // @formatter:off
-            {
-                case TypeCode.Empty:    return typeof(void);
-                case TypeCode.Object:   return typeof(object);
-                case TypeCode.DBNull:   return typeof(DBNull);
-                case TypeCode.Boolean:  return typeof(bool);
-                case TypeCode.Char:     return typeof(char);
-                case TypeCode.SByte:    return typeof(sbyte);
-                case TypeCode.Byte:     return typeof(byte);
-                case TypeCode.Int16:    return typeof(short);
-                case TypeCode.UInt16:   return typeof(ushort);
-                case TypeCode.Int32:    return typeof(int);
-                case TypeCode.UInt32:   return typeof(uint);
-                case TypeCode.Int64:    return typeof(long);
-                case TypeCode.UInt64:   return typeof(ulong);
-                case TypeCode.Single:   return typeof(float);
-                case TypeCode.Double:   return typeof(double);
-                case TypeCode.Decimal:  return typeof(decimal);
-                case TypeCode.DateTime: return typeof(DateTime);
-                case TypeCode.String:   return typeof(string);
-                default: // @formatter:on
-                    throw new ArgumentOutOfRangeException(nameof(typeCode), typeCode, null);
-            }
-        }
-
-        private static object ChangeType(object value, Type conversionType)
-        {
-            switch (conversionType) // @formatter:off
-            {
-                case Type a when a == typeof(bool):   return Convert.ToBoolean(value);
-                case Type a when a == typeof(short):  return Convert.ToInt16(value);
-                case Type a when a == typeof(int):    return Convert.ToInt32(value);
-                case Type a when a == typeof(long):   return Convert.ToInt64(value);
-                case Type a when a == typeof(byte):   return Convert.ToByte(value);
-                case Type a when a == typeof(double): return Convert.ToDouble(value);
-                case Type a when a == typeof(float):  return Convert.ToSingle(value);
-                case Type a when a == typeof(char):   return Convert.ToChar(value);
-                default: return null; // @formatter:on
-            }
-        }
-
         public static object GetNodeValue(this TomlNode node, TypeCode arrayArgType) // @formatter:off
         {
             if (node.IsBoolean)  return node.AsBoolean.Value;
@@ -446,10 +312,17 @@ namespace instance.id.TommyExtensions
             return null; // @formatter:on
         }
 
-        private static readonly string formatter = "0." + new string('#', 60);
+        private static object GetValueByType(this TomlNode node, Type propertyType) // @formatter:off
+        {
+            if (node.IsBoolean)  return node.AsBoolean.Value;
+            if (node.IsString)   return node.AsString.Value;
+            if (node.IsFloat)    return Convert.ChangeType(node.AsFloat.Value, propertyType);
+            if (node.IsInteger)  return Convert.ChangeType(node.AsInteger.Value, propertyType);
+            if (node.IsDateTime) return node.AsDateTime.Value;
+            return null; // @formatter:on
+        }
 
-        public static bool IsLegitArray(this Type property) =>
-            property.IsArray || property.GetInterface(typeof(IList<>).FullName) != null;
+        private static readonly string formatter = "0." + new string('#', 60);
 
         private static bool IsNumerical(this Type type)
         {
@@ -483,13 +356,6 @@ namespace instance.id.TommyExtensions
             src.GetType().GetProperty(propName, bindingAttr)?.SetValue(src, propValue);
         }
 
-        public static IEnumerable<T> ForEach<T>(this IEnumerable<T> source, Action<T> action)
-        {
-            var forEach = source as T[] ?? source.ToArray();
-            foreach (var item in forEach) action(item);
-            return forEach;
-        }
-
         #endregion
     }
 
@@ -497,7 +363,7 @@ namespace instance.id.TommyExtensions
 
     public static class CreateGeneric
     {
-        public static object Collection(TomlNode[] array, TypeCode typeCode, Type valueType, Type propertyType)
+        public static object Collection(TomlNode[] array, Type valueType, Type propertyType)
         {
             Type listType;
             var list = (IList) Activator.CreateInstance(listType = typeof(List<>).MakeGenericType(valueType));
@@ -506,56 +372,13 @@ namespace instance.id.TommyExtensions
             {
                 // -- No idea why this only works -------------------
                 // -- properly if I convert it twice?? --------------
-                typeCode = Convert.GetTypeCode(valueType);
+                var typeCode = Convert.GetTypeCode(valueType);
                 typeCode = Convert.GetTypeCode(typeCode);
-                var converted = value.GetNodeValue(typeCode);
 
-                Console.WriteLine($"  valueType: {valueType} value: {value} converted {converted} {converted.GetType()} ");
-                list.Add(converted);
+                list.Add(value.GetNodeValue(typeCode));
             }
 
             return propertyType.IsArray ? listType.GetMethod("ToArray")?.Invoke(list, null) : list;
-        }
-
-        public static void TestMethod()
-        {
-            Type listType = typeof(List<>);
-            Type[] typeArgs = {typeof(int)};
-            Type constructed = listType.MakeGenericType(typeArgs);
-            var myClassInstance = (IList) Activator.CreateInstance(constructed);
-
-            var lType = typeof(List<>).MakeGenericType(typeArgs);
-            var list = (IList) Activator.CreateInstance(lType);
-
-            myClassInstance.Add(1);
-            myClassInstance.Add(2);
-            myClassInstance.Add(3);
-            myClassInstance.Add(4);
-
-            list.Add(1);
-            list.Add(2);
-            list.Add(3);
-            list.Add(4);
-
-            MethodInfo getAllMethod = constructed.GetMethod("ToArray", new Type[] { });
-            object magicValue = getAllMethod.Invoke(myClassInstance, null);
-
-
-            Console.WriteLine($@"  magicValue: {magicValue} 
-            Value: {magicValue} 
-            Type: {magicValue.GetType()} 
-            myClassInstance: {myClassInstance} 
-            Type : {myClassInstance.GetType()}
-            Value0: {myClassInstance[0]}
-            Value1: {myClassInstance[1]} ");
-
-            Console.WriteLine($@"  magicValue: {magicValue} 
-            Value: {magicValue} 
-            Type: {magicValue.GetType()} 
-            myClassInstance: {list} 
-            Type : {list.GetType()}
-            Value0: {list[0]}
-            Value1: {list[1]} ");
         }
     }
 

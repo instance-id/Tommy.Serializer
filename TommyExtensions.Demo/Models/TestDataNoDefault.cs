@@ -16,7 +16,7 @@ namespace instance.id.TommyExtensions.Demo
         public string TestStringComment { get; set; }
 
         [TommyComment(@" This item should be a blank string : Testing null value")]
-        public string TestString { get; set; }
+        public string TestNull { get; set; }
 
         [TommyComment(@" Comment testing multiline verbatim strings #1
          Comment testing multiline verbatim strings #2
