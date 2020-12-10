@@ -20,9 +20,13 @@ namespace instance.id.TommyExtensions.Demo
             var testData = new TestData();
             var testData2 = new TestData2();
 
+            // -- Takes the TestData class and writes it's default values to disk.
             TommyExtensions.ToTomlFile(testData, path);
+
+            // -- Write both TestData and TestData2 values to single file.
             TommyExtensions.ToTomlFile(new object[] {testData, testData2}, pathCombined);
 
+            // -- Reads the file created from TestData and displays the values in the console.
             TestDataNoDefault loadTestData  = TommyExtensions.FromTomlFile<TestDataNoDefault>(path);
 
             string classData = null;
