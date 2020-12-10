@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using Tommy;
 
 // ReSharper disable ClassNeverInstantiated.Global
@@ -19,6 +18,53 @@ namespace instance.id.TommyExtensions
 {
     public static class TommyExtensions
     {
+        public static void TestToTomlFile(string path)
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>
+            {
+                {"string1", "string11"},
+                {"string2", "string22"},
+                {"string3", "string33"}
+            };
+
+            TomlTable tomlTable = new TomlTable();
+            TomlTable tomlDataTable = new TomlTable();
+
+            var dictKeys = new TomlArray();
+            var dictValues = new TomlArray();
+
+            var i = 0;
+            foreach (var kv in dict)
+            {
+                dictKeys[i] = new TomlString {Value = kv.Key};
+                dictValues[i] = new TomlString {Value = kv.Value};
+                i++;
+            }
+
+            tomlDataTable.Add($"{nameof(dict)}Keys", dictKeys);
+            tomlDataTable.Add($"{nameof(dict)}Values", dictValues);
+
+            tomlTable["Dictionary"] = tomlDataTable;
+
+            try
+            {
+                // -- Writes the Toml file to disk -----------------------
+                using (StreamWriter writer = new StreamWriter(path, false))
+                {
+                    tomlTable.WriteTo(writer);
+                    writer.Flush();
+                }
+
+                Console.WriteLine($"File saved to: {path}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
+
         /// <summary>
         /// Reflectively determines the property types and values of the passed class instance and outputs a Toml file
         /// </summary>
@@ -72,112 +118,30 @@ namespace instance.id.TommyExtensions
 
                         // -- Check each property type in order to
                         // -- determine which type of TomlNode to create
-
-
-                        // if (prop.PropertyType == typeof(bool))
-                        // {
-                        //     tomlData.Add(new SortNode
-                        //     {
-                        //         Name = prop.Name,
-                        //         SortOrder = sortOrder ?? -1,
-                        //         Value = new TomlBoolean
-                        //         {
-                        //             Comment = comment,
-                        //             Value = (bool) prop.GetValue(data)
-                        //         }
-                        //     });
-                        //     continue;
-                        // }
-                        //
-                        // if (prop.PropertyType == typeof(string))
-                        // {
-                        //     tomlData.Add(new SortNode
-                        //     {
-                        //         Name = prop.Name,
-                        //         SortOrder = sortOrder ?? -1,
-                        //         Value = new TomlString
-                        //         {
-                        //             Comment = comment,
-                        //             Value = prop.GetValue(data)?.ToString() ?? ""
-                        //         }
-                        //     });
-                        //     continue;
-                        // }
-                        //
-                        // if (prop.PropertyType.IsInteger())
-                        // {
-                        //     switch (prop.PropertyType)
-                        //     {
-                        //         case Type a when a == typeof(int):
-                        //             tomlData.Add(new SortNode
-                        //             {
-                        //                 Name = prop.Name,
-                        //                 SortOrder = sortOrder ?? -1,
-                        //                 Value = new TomlInteger
-                        //                 {
-                        //                     Comment = comment,
-                        //                     Value = Convert.ToInt32(propValue ?? 0)
-                        //                 }
-                        //             });
-                        //             break;
-                        //         case Type a when a == typeof(ulong):
-                        //             tomlData.Add(new SortNode
-                        //             {
-                        //                 Name = prop.Name,
-                        //                 SortOrder = sortOrder ?? -1,
-                        //                 Value = new TomlInteger
-                        //                 {
-                        //                     Comment = comment,
-                        //                     Value = Convert.ToInt64(propValue ?? 0)
-                        //                 }
-                        //             });
-                        //             break;
-                        //         case Type a when a == typeof(float):
-                        //             var floatValue = (float) propValue;
-                        //             tomlData.Add(new SortNode
-                        //             {
-                        //                 Name = prop.Name,
-                        //                 SortOrder = sortOrder ?? -1,
-                        //                 Value = new TomlFloat
-                        //                 {
-                        //                     Comment = comment,
-                        //                     Value = Convert.ToDouble(floatValue.ToString(formatter))
-                        //                 }
-                        //             });
-                        //             break;
-                        //         case Type a when a == typeof(double):
-                        //             tomlData.Add(new SortNode
-                        //             {
-                        //                 Name = prop.Name,
-                        //                 SortOrder = sortOrder ?? -1,
-                        //                 Value = new TomlFloat
-                        //                 {
-                        //                     Comment = comment,
-                        //                     Value = Convert.ToDouble(propValue ?? 0)
-                        //                 }
-                        //             });
-                        //             break;
-                        //         case Type a when a == typeof(decimal):
-                        //             tomlData.Add(new SortNode
-                        //             {
-                        //                 Name = prop.Name,
-                        //                 SortOrder = sortOrder ?? -1,
-                        //                 Value = new TomlFloat
-                        //                 {
-                        //                     Comment = comment,
-                        //                     Value = Convert.ToDouble(propValue ?? 0)
-                        //                 }
-                        //             });
-                        //             break;
-                        //     }
-                        //
-                        //     continue;
-                        // }
-
-                        if (prop.PropertyType.GetInterface(nameof(IEnumerable)) == null && !prop.PropertyType.IsArray)
+                        if (prop.PropertyType == typeof(string) || (prop.PropertyType.GetInterface(nameof(IEnumerable)) == null && !prop.PropertyType.IsArray))
                         {
-                            tomlData.Add(GetTomlNode(prop, sortOrder, comment, data));
+                            tomlData.Add(GetTomlSortNode(prop, sortOrder, comment, data));
                         }
+                        else if (prop.PropertyType.GetInterface(nameof(IEnumerable)) != null && prop.PropertyType.GetInterface(nameof(IDictionary)) != null)
+                        {
+                            var typeValue = propValue as IDictionary;
+                            if (typeValue == null) continue;
+
+                            var dictTypeArguments = typeValue.GetType().GenericTypeArguments;
+                            var kType = dictTypeArguments[0];
+                            var vType = dictTypeArguments[1];
+
+                            var dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, prop.PropertyType);
+                            dictionaryNode.Comment = comment;
+
+                            tomlData.Add(new SortNode
+                            {
+                                Name = prop.Name,
+                                SortOrder = sortOrder ?? -1,
+                                Value = dictionaryNode
+                            });
+                        }
+
                         else
                         {
                             var val = propValue as IList;
@@ -197,7 +161,6 @@ namespace instance.id.TommyExtensions
                                         case Type v when v == typeof(DateTime): tomlArray.Add(new TomlDateTime {Value = (DateTime) val[i]}); break;
                                     } // @formatter:on
                                 }
-
 
                             tomlData.Add(new SortNode
                             {
@@ -287,7 +250,7 @@ namespace instance.id.TommyExtensions
 
                     if (!tableData[key].HasValue) continue;
 
-                    if (!tableData[key].IsArray)
+                    if (!tableData[key].IsArray || propertyType == typeof(string))
                         dataClass.SetPropertyValue(key, GetValueByType(tableData[key], propertyType));
                     else
                     {
@@ -318,6 +281,49 @@ namespace instance.id.TommyExtensions
         }
 
         #region Extension Methods
+
+        private static string GetName(this Type type) => type.Name.Split('.').Last().GetRange('`');
+
+        private static string GetRange(this string s, int startIndex, char stopCharacter) // @formatter:off
+        {
+            var substring = "";
+            for (var i = startIndex; i < s.Length; i++) { char c = s[i];
+                if (c == stopCharacter) break;
+                substring += c;
+            } return substring; // @formatter:on
+        }
+
+        public static string GetRange(this string s, char stopCharacter)
+        {
+            return s.GetRange(0, stopCharacter);
+        }
+
+        private static TomlNode CreateTomlDictionary<TKey, TValue>(TKey tKey, TValue tValue, IDictionary dictionary, Type property)
+        {
+            TomlTable tomlDataTable = new TomlTable();
+
+            var dictKeys = new TomlArray();
+            var dictValues = new TomlArray();
+
+            Type kType = tKey as Type;
+            Type vType = tValue as Type;
+
+            var dictInstance = (IDictionary) Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(kType, vType));
+            dictInstance = dictionary;
+
+            var i = 0;
+            foreach (DictionaryEntry kv in dictInstance)
+            {
+                dictKeys[i] = GetTomlNode(kv.Key);
+                dictValues[i] = GetTomlNode(kv.Value);
+                i++;
+            }
+
+            tomlDataTable.Add($"{property.GetName()}Keys", dictKeys);
+            tomlDataTable.Add($"{property.GetName()}Values", dictValues);
+
+            return tomlDataTable;
+        }
 
         private static object ChangeType(this TypeCode type, object value)
         {
@@ -368,26 +374,39 @@ namespace instance.id.TommyExtensions
                 default: return null; } // @formatter:on
         }
 
-        private static SortNode GetTomlNode(PropertyInfo prop, int? sortOrder, string comment, object data)
+        private static TomlNode GetTomlNode(object obj)
         {
+            var valueType = obj.GetType();
+            switch (valueType)
+            {
+                case Type v when v == typeof(bool): return new TomlBoolean {Value = (bool) obj};
+                case Type v when v == typeof(string): return new TomlString {Value = (string) obj.ToString()};
+                case Type v when v.IsFloat(): return new TomlFloat {Value = (double) Convert.ChangeType(obj, TypeCode.Double)};
+                case Type v when v.IsInteger(): return new TomlInteger {Value = (long) Convert.ChangeType(obj, TypeCode.Int64)};
+                case Type v when v == typeof(DateTime): return new TomlDateTime {Value = (DateTime) obj};
+                default: throw new Exception($"Was not able to process item {valueType.Name}");
+            }
+        }
+
+        private static SortNode GetTomlSortNode(PropertyInfo prop, int? sortOrder, string comment, object data)
+        {
+            var propData = prop.GetValue(data);
             switch (prop.PropertyType) // @formatter:off
             {
-                case Type t when t == typeof(bool):
+                case Type t when t == typeof(bool): return new SortNode{Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
+                            new TomlBoolean {Comment = comment, Value = (bool) propData}};
+                case Type t when t == typeof(string): return new SortNode{Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
+                            new TomlString {Comment = comment, Value = propData != null ? propData.ToString() : ""}};
+                case Type t when t.IsFloat(): double Converter()
+                    { return prop.PropertyType == typeof(float)
+                        ? (double) Convert.ChangeType(((float) propData).ToString(formatter), TypeCode.Double)
+                        : (double) Convert.ChangeType(propData, TypeCode.Double);}
                     return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                        new TomlBoolean {Comment = comment, Value = (bool) prop.GetValue(data)}};
-                case Type t when t == typeof(string):
-                    return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                        new TomlString {Comment = comment, Value = prop.GetValue(data)?.ToString()}};
-                case Type t when t.IsFloat():
-                    return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                        new TomlFloat {Comment = comment, Value = (double) Convert.ChangeType(prop.GetValue(data), TypeCode.Double)}};
-                case Type t when t.IsInteger():
-                    return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                        new TomlInteger {Comment = comment, Value = (long) Convert.ChangeType(prop.GetValue(data), TypeCode.Int64) }};
-                case Type t when t == typeof(DateTime):
-                    return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                        new TomlDateTime {Comment = comment, Value = (DateTime) prop.GetValue(data)}};
-                case Type t when t == typeof(IEnumerable): break;
+                            new TomlFloat {Comment = comment, Value = (double) Converter()}};
+                case Type t when t.IsInteger(): return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
+                            new TomlInteger {Comment = comment, Value = (long) Convert.ChangeType(propData, TypeCode.Int64)}};
+                case Type t when t == typeof(DateTime): return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
+                            new TomlDateTime {Comment = comment, Value = (DateTime) propData}};
             }
             throw new Exception($"Was not able to process item {prop.Name} of type: {prop.PropertyType}"); // @formatter:on
         }
@@ -402,28 +421,7 @@ namespace instance.id.TommyExtensions
                 type == typeof(decimal);
         } // @formatter:on
 
-        private static bool GetFloatType(this Type type)
-        {
-            return // @formatter:off
-                type == typeof(float)  ||
-                type == typeof(double) ||
-                type == typeof(decimal);
-        } // @formatter:on
-
         private static bool IsInteger(this Type type)
-        {
-            return // @formatter:off
-                type == typeof(sbyte)  ||
-                type == typeof(byte)   ||
-                type == typeof(short)  ||
-                type == typeof(ushort) ||
-                type == typeof(int)    ||
-                type == typeof(uint)   ||
-                type == typeof(long)   ||
-                type == typeof(ulong);
-        } // @formatter:on
-
-        private static bool GetNumericalType(this Type type)
         {
             return // @formatter:off
                 type == typeof(sbyte)  ||

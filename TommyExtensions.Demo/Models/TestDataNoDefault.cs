@@ -11,12 +11,21 @@ namespace instance.id.TommyExtensions.Demo
     [TommyTableName("tablename")]
     public class TestDataNoDefault
     {
+        [TommyIgnore]
+        public string TestIgnoreProperty { get; set; }
+
+        [TommyComment(" Comment for date property")]
+        public DateTime TestDateComment { get; set; }
+
+        [TommyComment(" Comment for Dictionary<K,V> property")]
+        public Dictionary<string, string> TestDictionaryComment { get; set; }
+
         [TommyComment(" Comment for string property\n Testing second line comment\n" +
                       "This and subsequent items should appear after the sorted properties")]
         public string TestStringComment { get; set; }
 
         [TommyComment(@" This item should be a blank string : Testing null value")]
-        public string TestNull { get; set; }
+        public string TestNullString { get; set; }
 
         [TommyComment(@" Comment testing multiline verbatim strings #1
          Comment testing multiline verbatim strings #2
@@ -67,8 +76,5 @@ namespace instance.id.TommyExtensions.Demo
 
         [TommyComment(@" Comment for List<ulong> property")]
         public List<ulong> TestULongList { get; set; }
-
-        [TommyIgnore]
-        public string TestIgnoreProperty { get; set; }
     }
 }

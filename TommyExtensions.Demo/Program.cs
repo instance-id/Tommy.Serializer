@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+// using MarkdownTable;
 
 namespace instance.id.TommyExtensions.Demo
 {
@@ -26,6 +27,7 @@ namespace instance.id.TommyExtensions.Demo
             // -- Write both TestData and TestData2 values to single file.
             TommyExtensions.ToTomlFile(new object[] {testData, testData2}, pathCombined);
 
+            // ---------------
             // -- Reads the file created from TestData and displays the values in the console.
             TestDataNoDefault loadTestData  = TommyExtensions.FromTomlFile<TestDataNoDefault>(path);
 
