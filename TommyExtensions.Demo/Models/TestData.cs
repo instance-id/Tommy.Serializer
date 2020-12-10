@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace instance.id.TommyExtensions.Demo
 {
-    [TommyTableName("nametest")]
+    [TommyTableName("tablename")]
     public class TestData
     {
         [TommyComment(" Comment for string property\n Testing second line comment\n" +
@@ -15,7 +15,7 @@ namespace instance.id.TommyExtensions.Demo
         public string TestStringComment { get; set; } = "Test String";
 
         [TommyComment(@" This item should be a blank string : Testing null value")]
-        public string TestString { get; set; }
+        public string TestNullString { get; set; }
 
         [TommyComment(@" Comment testing multiline verbatim strings #1
          Comment testing multiline verbatim strings #2
@@ -60,6 +60,12 @@ namespace instance.id.TommyExtensions.Demo
         [TommyComment(@" Comment for List<string> property")]
         public List<string> TestStringListComment { get; set; } = new List<string> {"string1", "string2", "string3"};
         public List<string> TestStringList { get; set; } = new List<string> {"string1", "string2", "string3"};
+
+        [TommyComment(@" Comment for ulong array property")]
+        public ulong[] TestULongArray { get; set; } = new ulong[] {448543646457048001, 448543646457048002, 448543646457048003, 448543646457048004};
+
+        [TommyComment(@" Comment for List<ulong> property")]
+        public List<ulong> TestULongList { get; set; } = new List<ulong> {448543646457048001, 448543646457048002, 448543646457048003};
 
         [TommyIgnore]
         public string TestIgnoreProperty { get; set; } = "I should not show up in the created file";

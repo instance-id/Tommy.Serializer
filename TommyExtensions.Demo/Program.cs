@@ -14,16 +14,15 @@ namespace instance.id.TommyExtensions.Demo
     {
         static void Main(string[] args)
         {
-            // var testData = new TestData();
-            // var testData2 = new TestData2();
-            // var path2 = "TestData2.toml".DeterminePath();
-            // var pathCombined = "TestDataCombined.toml".DeterminePath();
+            var path = "TestData.toml".DeterminePath();
+            var pathCombined = "TestDataCombined.toml".DeterminePath();
 
-            // TommyExtensions.ToTomlFile(testData, path);
-            // TommyExtensions.ToTomlFile(testData2, path2);
-            // TommyExtensions.ToTomlFile(new object[] {testData, testData2}, pathCombined);
+            var testData = new TestData();
+            var testData2 = new TestData2();
 
-            var path = "TestDataNoDefault.toml".DeterminePath();
+            TommyExtensions.ToTomlFile(testData, path);
+            TommyExtensions.ToTomlFile(new object[] {testData, testData2}, pathCombined);
+
             TestDataNoDefault loadTestData  = TommyExtensions.FromTomlFile<TestDataNoDefault>(path);
 
             string classData = null;

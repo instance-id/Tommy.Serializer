@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace instance.id.TommyExtensions.Demo
 {
-    [TommyTableName("testdatanodefault")]
+    [TommyTableName("tablename")]
     public class TestDataNoDefault
     {
         [TommyComment(" Comment for string property\n Testing second line comment\n" +
@@ -61,6 +61,12 @@ namespace instance.id.TommyExtensions.Demo
         [TommyComment(@" Comment for List<string> property")]
         public List<string> TestStringListComment { get; set; }
         public List<string> TestStringList { get; set; }
+
+        [TommyComment(@" Comment for ulong array property")]
+        public ulong[] TestULongArray { get; set; }
+
+        [TommyComment(@" Comment for List<ulong> property")]
+        public List<ulong> TestULongList { get; set; }
 
         [TommyIgnore]
         public string TestIgnoreProperty { get; set; }
