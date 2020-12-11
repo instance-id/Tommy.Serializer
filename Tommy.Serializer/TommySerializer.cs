@@ -9,7 +9,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Tommy;
+
+// ReSharper disable MemberCanBePrivate.Global
 
 // ReSharper disable ClassNeverInstantiated.Global
 // ReSharper disable PatternAlwaysOfType
@@ -68,27 +69,26 @@ namespace Tommy.Serializer
                         if (Attribute.IsDefined(prop, typeof(TommyIgnore))) continue;
 
                         // -- Check if property has comment attribute ------------
-                        var comment   = prop.GetCustomAttribute<TommyComment>()?.Value;
+                        var comment = prop.GetCustomAttribute<TommyComment>()?.Value;
                         var sortOrder = prop.GetCustomAttribute<TommySortOrder>()?.SortOrder;
-                        var propValue = data.GetPropertyValue(prop.Name);
-                        var propType  = prop.PropertyType;
+                        var propertyValue = data.GetPropertyValue(prop.Name);
+                        var propertyType = prop.PropertyType;
 
                         // -- Check each property type in order to
                         // -- determine which type of TomlNode to create
-                        if (propType == typeof(string) || (propType.GetInterface(nameof(IEnumerable)) == null && !propType.IsArray))
-                        {
+                        if (propertyType == typeof(string) || (propertyType.GetInterface(nameof(IEnumerable)) == null && !propertyType.IsArray))
                             tomlData.Add(GetTomlSortNode(prop, sortOrder, comment, data));
-                        }
-                        else if (propType.GetInterface(nameof(IEnumerable)) != null && propType.GetInterface(nameof(IDictionary)) != null)
+
+                        else if (propertyType.GetInterface(nameof(IEnumerable)) != null && propertyType.GetInterface(nameof(IDictionary)) != null)
                         {
-                            var typeValue = propValue as IDictionary;
+                            var typeValue = propertyValue as IDictionary;
                             if (typeValue == null) continue;
 
                             var dictTypeArguments = typeValue.GetType().GenericTypeArguments;
                             var kType = dictTypeArguments[0];
                             var vType = dictTypeArguments[1];
 
-                            var dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, propType);
+                            var dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, propertyType);
                             dictionaryNode.Comment = comment;
 
                             tomlData.Add(new SortNode
@@ -100,9 +100,9 @@ namespace Tommy.Serializer
                         }
                         else
                         {
-                            var propAsList = propValue as IList;
+                            var propAsList = propertyValue as IList;
                             var tomlArray = new TomlArray {Comment = comment};
-                            var propArgType = propType.GetElementType() ?? propType.GetGenericArguments().FirstOrDefault();
+                            var propArgType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
 
                             if (propAsList != null)
                                 for (var i = 0; i < propAsList.Count; i++)
@@ -110,7 +110,11 @@ namespace Tommy.Serializer
                                     if (propAsList[i] == null) throw new ArgumentNullException($"Error: collection value cannot be null");
                                     tomlArray.Add(GetTomlNode(propAsList[i], propArgType));
                                 }
-                            else { Console.WriteLine($"{prop.Name} could not be cast as IList."); continue; }
+                            else
+                            {
+                                Console.WriteLine($"{prop.Name} could not be cast as IList.");
+                                continue;
+                            }
 
                             tomlData.Add(new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value = tomlArray});
                         }
@@ -198,14 +202,25 @@ namespace Tommy.Serializer
                 {
                     var key = tableKeys[k];
                     var propertyType = properties.FirstOrDefault(x => x.Name == key)?.PropertyType;
+                    if (propertyType == null)
+                    {
+                        Console.WriteLine($"Property for {key} not found in class {typeof(T).Name}");
+                        continue;
+                    }
 
-                    if (!tableData[key].HasValue) continue;
+                    if (!tableData[key].HasValue && !tableData[key].IsTable) continue;
 
-                    if (!tableData[key].IsArray || propertyType == typeof(string))
+                    if (propertyType == typeof(string) && tableData[key].IsString || !tableData[key].IsArray && !tableData[key].IsTable)
                         dataClass.SetPropertyValue(key, GetValueByType(tableData[key], propertyType));
+
+                    else if (tableData[key].IsTable && propertyType.GetInterface(nameof(IEnumerable)) != null && propertyType.GetInterface(nameof(IDictionary)) != null)
+                    {
+                        dataClass.SetPropertyValue(key, CreateGenericDictionary(tableData[key], propertyType));
+                    }
+
                     else
                     {
-                        if (propertyType?.GetInterface(nameof(IEnumerable)) == null) continue;
+                        if (propertyType.GetInterface(nameof(IEnumerable)) == null) continue;
 
                         var valueType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
                         if (valueType == null)
@@ -317,13 +332,15 @@ namespace Tommy.Serializer
         {
             if (valueType == null) valueType = obj.GetType();
 
-            return valueType switch {
-                Type v when v == typeof(bool)     => new TomlBoolean  { Value = (bool) obj},
-                Type v when v == typeof(string)   => new TomlString   { Value = (string) obj.ToString() != null ? obj.ToString() : ""},
-                Type v when v.IsFloat()           => new TomlFloat    { Value = (double) FloatConverter(valueType, obj)},
-                Type v when v.IsInteger()         => new TomlInteger  { Value = (long) Convert.ChangeType(obj, TypeCode.Int64)},
-                Type v when v == typeof(DateTime) => new TomlDateTime { Value = (DateTime) obj},
-                _ => throw new Exception($"Was not able to process item {valueType.Name}") }; // @formatter:on
+            return valueType switch
+            {
+                Type v when v == typeof(bool) => new TomlBoolean {Value = (bool) obj},
+                Type v when v == typeof(string) => new TomlString {Value = obj.ToString() != null ? obj.ToString() : ""},
+                Type v when v.IsFloat() => new TomlFloat {Value = FloatConverter(valueType, obj)},
+                Type v when v.IsInteger() => new TomlInteger {Value = (long) Convert.ChangeType(obj, TypeCode.Int64)},
+                Type v when v == typeof(DateTime) => new TomlDateTime {Value = (DateTime) obj},
+                _ => throw new Exception($"Was not able to process item {valueType.Name}")
+            }; // @formatter:on
         }
 
         private static SortNode GetTomlSortNode(PropertyInfo prop, int? sortOrder, string comment, object data)
@@ -369,6 +386,38 @@ namespace Tommy.Serializer
             }
 
             return propertyType.IsArray ? listType.GetMethod("ToArray")?.Invoke(list, null) : list;
+        }
+
+        private static object CreateGenericDictionary(TomlNode tableData, Type propertyType)
+        {
+            var valueType = propertyType.GetGenericArguments();
+            if (valueType.Length < 2)
+            {
+                Console.WriteLine($"Warning: Could not find argument type for property: {propertyType.Name}.");
+                return null;
+            }
+
+            var tableKeys = tableData.AsTable.Keys.ToArray();
+
+            var dictionaryKeys = tableData[tableKeys.FirstOrDefault(x => x.EndsWith("Keys"))].AsArray;
+            var dictionaryValues = tableData[tableKeys.FirstOrDefault(x => x.EndsWith("Values"))].AsArray;
+
+            var dictionary = (IDictionary) Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(valueType));
+
+            if (dictionaryKeys != null && dictionaryValues != null)
+                for (var i = 0; i < dictionaryKeys.ChildrenCount; i++)
+                {
+                    Enum.TryParse(valueType[0].Name, out TypeCode keyTypeCode);
+                    Enum.TryParse(valueType[1].Name, out TypeCode valueTypeCode);
+                    dictionary.Add(GetNodeValue(dictionaryKeys[i], keyTypeCode), GetNodeValue(dictionaryValues[i], valueTypeCode));
+                }
+            else
+            {
+                Console.WriteLine($"Warning: Dictionary {propertyType.Name} data is missing or incorrectly formatted.");
+                return null;
+            }
+
+            return dictionary;
         }
 
         private static TomlNode CreateTomlDictionary<TKey, TValue>(TKey tKey, TValue tValue, IDictionary dictionary, Type property)
@@ -420,10 +469,10 @@ namespace Tommy.Serializer
     [AttributeUsage(AttributeTargets.Class)]
     public class TommyTableName : Attribute
     {
-         /// <summary>
-         /// String value which will be used as the Toml Table name
-         /// </summary>
-         public string TableName { get; }
+        /// <summary>
+        /// String value which will be used as the Toml Table name
+        /// </summary>
+        public string TableName { get; }
 
         /// <summary> Designates a class as a Toml Table and applies all contained properties as children of that table </summary>
         /// <param name="tableName">String value which will be used as the Toml Table name</param>
