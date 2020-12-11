@@ -16,6 +16,9 @@ using Tommy;
 
 namespace Tommy.Serializer
 {
+    /// <summary>
+    /// A class to enable (De)Serialization of a class instance to/from disk
+    /// </summary>
     public static class TommySerializer
     {
         /// <summary>
@@ -65,17 +68,18 @@ namespace Tommy.Serializer
                         if (Attribute.IsDefined(prop, typeof(TommyIgnore))) continue;
 
                         // -- Check if property has comment attribute ------------
-                        var comment = prop.GetCustomAttribute<TommyComment>()?.Value;
+                        var comment   = prop.GetCustomAttribute<TommyComment>()?.Value;
                         var sortOrder = prop.GetCustomAttribute<TommySortOrder>()?.SortOrder;
                         var propValue = data.GetPropertyValue(prop.Name);
+                        var propType  = prop.PropertyType;
 
                         // -- Check each property type in order to
                         // -- determine which type of TomlNode to create
-                        if (prop.PropertyType == typeof(string) || (prop.PropertyType.GetInterface(nameof(IEnumerable)) == null && !prop.PropertyType.IsArray))
+                        if (propType == typeof(string) || (propType.GetInterface(nameof(IEnumerable)) == null && !propType.IsArray))
                         {
                             tomlData.Add(GetTomlSortNode(prop, sortOrder, comment, data));
                         }
-                        else if (prop.PropertyType.GetInterface(nameof(IEnumerable)) != null && prop.PropertyType.GetInterface(nameof(IDictionary)) != null)
+                        else if (propType.GetInterface(nameof(IEnumerable)) != null && propType.GetInterface(nameof(IDictionary)) != null)
                         {
                             var typeValue = propValue as IDictionary;
                             if (typeValue == null) continue;
@@ -84,7 +88,7 @@ namespace Tommy.Serializer
                             var kType = dictTypeArguments[0];
                             var vType = dictTypeArguments[1];
 
-                            var dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, prop.PropertyType);
+                            var dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, propType);
                             dictionaryNode.Comment = comment;
 
                             tomlData.Add(new SortNode
@@ -94,33 +98,21 @@ namespace Tommy.Serializer
                                 Value = dictionaryNode
                             });
                         }
-
                         else
                         {
-                            var val = propValue as IList;
+                            var propAsList = propValue as IList;
                             var tomlArray = new TomlArray {Comment = comment};
+                            var propArgType = propType.GetElementType() ?? propType.GetGenericArguments().FirstOrDefault();
 
-                            if (val != null)
-                                for (var i = 0; i < val.Count; i++)
+                            if (propAsList != null)
+                                for (var i = 0; i < propAsList.Count; i++)
                                 {
-                                    if (val[i] == null) throw new ArgumentNullException($"Error: collection value cannot be null");
-                                    var valueType = val[i].GetType();
-                                    switch (valueType) // @formatter:off
-                                    {
-                                        case Type v when v == typeof(bool): tomlArray.Add(new TomlBoolean {Value = (bool) val[i] }); break;
-                                        case Type v when v == typeof(string): tomlArray.Add(new TomlString {Value = (string) val[i]?.ToString()}); break;
-                                        case Type v when v.IsFloat(): tomlArray.Add(new TomlFloat {Value = (double) Convert.ChangeType(val[i], TypeCode.Double) }); break;
-                                        case Type v when v.IsInteger(): tomlArray.Add(new TomlInteger {Value = (long) Convert.ChangeType(val[i], TypeCode.Int64) }); break;
-                                        case Type v when v == typeof(DateTime): tomlArray.Add(new TomlDateTime {Value = (DateTime) val[i]}); break;
-                                    } // @formatter:on
+                                    if (propAsList[i] == null) throw new ArgumentNullException($"Error: collection value cannot be null");
+                                    tomlArray.Add(GetTomlNode(propAsList[i], propArgType));
                                 }
+                            else { Console.WriteLine($"{prop.Name} could not be cast as IList."); continue; }
 
-                            tomlData.Add(new SortNode
-                            {
-                                Name = prop.Name,
-                                SortOrder = sortOrder ?? -1,
-                                Value = tomlArray
-                            });
+                            tomlData.Add(new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value = tomlArray});
                         }
                     }
 
@@ -175,6 +167,12 @@ namespace Tommy.Serializer
             }
         }
 
+        /// <summary>
+        /// Creates a new instance of Type <typeparamref name="T"/> and parses Toml file from <paramref name="path"/>
+        /// </summary>
+        /// <param name="path">The full path to the existing Toml file you wish to parse</param>
+        /// <typeparam name="T">The Type of class in which the parsed Toml data will be assigned</typeparam>
+        /// <returns>An instantiated class of Type <typeparamref name="T"/></returns>
         public static T FromTomlFile<T>(string path) where T : class, new()
         {
             try
@@ -219,7 +217,7 @@ namespace Tommy.Serializer
                         var array = tableData[key].AsArray.RawArray.ToArray();
 
                         if (valueType.GetInterface(nameof(IConvertible)) != null)
-                            dataClass.SetPropertyValue(key, CreateGeneric.Collection(array, valueType, propertyType));
+                            dataClass.SetPropertyValue(key, CreateGenericList(array, valueType, propertyType));
                         else Console.WriteLine($"Warning: {valueType.Name} is not able to be converted.");
                     }
                 }
@@ -235,7 +233,8 @@ namespace Tommy.Serializer
 
         #region Extension Methods
 
-        private static string GetName(this Type type) => type.Name.Split('.').Last().GetRange('`');
+        private static string GetName(this Type type) =>
+            type.Name.Split('.').Last().GetRange('`');
 
         private static string GetRange(this string s, int startIndex, char stopCharacter) // @formatter:off
         {
@@ -246,9 +245,130 @@ namespace Tommy.Serializer
             } return substring; // @formatter:on
         }
 
-        public static string GetRange(this string s, char stopCharacter)
+        private static string GetRange(this string s, char stopCharacter) =>
+            s.GetRange(0, stopCharacter);
+
+        private static readonly string formatter = "0." + new string('#', 60);
+
+        private static double FloatConverter(Type type, object obj)
         {
-            return s.GetRange(0, stopCharacter);
+            return type == typeof(float)
+                ? (double) Convert.ChangeType(((float) obj).ToString(formatter), TypeCode.Double)
+                : (double) Convert.ChangeType(obj, TypeCode.Double);
+        }
+
+        private static bool IsFloat(this Type type) => // @formatter:off
+            type == typeof(float)  ||
+            type == typeof(double) ||
+            type == typeof(decimal); // @formatter:on
+
+        private static bool IsInteger(this Type type) => // @formatter:off
+            type == typeof(sbyte)  ||
+            type == typeof(byte)   ||
+            type == typeof(short)  ||
+            type == typeof(ushort) ||
+            type == typeof(int)    ||
+            type == typeof(uint)   ||
+            type == typeof(long)   ||
+            type == typeof(ulong);
+        // @formatter:on
+
+        #endregion
+
+        #region Property Get/Set
+
+        private static object GetPropertyValue(this object src, string propName,
+            BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public) =>
+            src.GetType().GetProperty(propName, bindingAttr)?.GetValue(src, null);
+
+        private static void SetPropertyValue<T>(this object src, string propName, T propValue,
+            BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public) =>
+            src.GetType().GetProperty(propName, bindingAttr)?.SetValue(src, propValue);
+
+        #endregion
+
+        #region TomlNodes
+
+        private static object GetNodeValue(this TomlNode node, TypeCode typeCode) // @formatter:off
+        {
+            return node switch
+            {
+                TomlNode {IsBoolean: true}  => node.AsBoolean.Value,
+                TomlNode {IsString: true}   => node.AsString.Value,
+                TomlNode {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, typeCode),
+                TomlNode {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, typeCode),
+                TomlNode {IsDateTime: true} => node.AsDateTime.Value,
+                _ => null };  // @formatter:on
+        }
+
+        private static object GetValueByType(this TomlNode node, Type propertyType) // @formatter:off
+        {
+            return node switch
+            {
+                TomlNode {IsBoolean: true}  => node.AsBoolean.Value,
+                TomlNode {IsString: true}   => node.AsString.Value,
+                TomlNode {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, propertyType),
+                TomlNode {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, propertyType),
+                TomlNode {IsDateTime: true} => node.AsDateTime.Value,
+                _ => null }; // @formatter:on
+        }
+
+        private static TomlNode GetTomlNode(object obj, Type valueType = null)
+        {
+            if (valueType == null) valueType = obj.GetType();
+
+            return valueType switch {
+                Type v when v == typeof(bool)     => new TomlBoolean  { Value = (bool) obj},
+                Type v when v == typeof(string)   => new TomlString   { Value = (string) obj.ToString() != null ? obj.ToString() : ""},
+                Type v when v.IsFloat()           => new TomlFloat    { Value = (double) FloatConverter(valueType, obj)},
+                Type v when v.IsInteger()         => new TomlInteger  { Value = (long) Convert.ChangeType(obj, TypeCode.Int64)},
+                Type v when v == typeof(DateTime) => new TomlDateTime { Value = (DateTime) obj},
+                _ => throw new Exception($"Was not able to process item {valueType.Name}") }; // @formatter:on
+        }
+
+        private static SortNode GetTomlSortNode(PropertyInfo prop, int? sortOrder, string comment, object data)
+        {
+            var propData = prop.GetValue(data); // @formatter:off
+
+            return prop.PropertyType switch {
+                Type t when t == typeof(bool) => new SortNode{Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
+                    new TomlBoolean {Comment = comment, Value = (bool) propData}},
+
+                Type t when t == typeof(string) => new SortNode{Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
+                    new TomlString {Comment = comment, Value = propData != null ? propData.ToString() : ""}},
+
+                Type t when t.IsFloat() => new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
+                    new TomlFloat {Comment = comment, Value = FloatConverter(prop.PropertyType, propData)}},
+
+                Type t when t.IsInteger() => new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
+                    new TomlInteger {Comment = comment, Value = (long) Convert.ChangeType(propData, TypeCode.Int64)}},
+
+                Type t when t == typeof(DateTime) => new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
+                    new TomlDateTime {Comment = comment, Value = (DateTime) propData}},
+
+                _ => throw new Exception($"Was not able to process item {prop.Name} of type: {prop.PropertyType}") }; // @formatter:on
+        }
+
+        #endregion
+
+        #region Generic Creation
+
+        private static object CreateGenericList(TomlNode[] array, Type valueType, Type propertyType)
+        {
+            Type listType;
+            var list = (IList) Activator.CreateInstance(listType = typeof(List<>).MakeGenericType(valueType));
+
+            foreach (var value in array)
+            {
+                if (value == null) continue;
+
+                Enum.TryParse(valueType.Name, out TypeCode typeCode);
+                var nodeValue = value.GetNodeValue(typeCode);
+                if (nodeValue != null) list.Add(nodeValue);
+                else Console.WriteLine(new Exception($"{propertyType.Name} value is null. This is unacceptable."));
+            }
+
+            return propertyType.IsArray ? listType.GetMethod("ToArray")?.Invoke(list, null) : list;
         }
 
         private static TomlNode CreateTomlDictionary<TKey, TValue>(TKey tKey, TValue tValue, IDictionary dictionary, Type property)
@@ -278,154 +398,12 @@ namespace Tommy.Serializer
             return tomlDataTable;
         }
 
-        private static object ChangeType(this TypeCode type, object value)
-        {
-            object result = null;
-            switch (type) // @formatter:off
-            {
-                case TypeCode.Boolean : return (bool) Convert.ToBoolean(value);
-                case TypeCode.Int16   : return (short) Convert.ToInt16(value);
-                case TypeCode.Int32   : return (int) Convert.ToInt32(value);
-                case TypeCode.Int64   : return (long) Convert.ToInt64(value);
-                case TypeCode.Byte    : return (byte) Convert.ToByte(value);
-                case TypeCode.Double  : return (double) Convert.ToDouble(value);
-                case TypeCode.Single  : return (float) Convert.ToSingle(value);
-                case TypeCode.Char    : return (char) Convert.ToChar(value);
-                default: break; // @formatter:on
-            }
-
-            return result;
-        }
-
-        public static object GetNodeValue(this TomlNode node, TypeCode typeCode) // @formatter:off
-        {
-            try
-            {
-                switch (node) { // @formatter:off
-                    case TomlNode a when a.IsBoolean:  return node.AsBoolean.Value;
-                    case TomlNode a when a.IsString:   return node.AsString.Value;
-                    case TomlNode a when a.IsFloat:    return Convert.ChangeType(node.AsFloat.Value, typeCode);
-                    case TomlNode a when a.IsInteger:  return Convert.ChangeType(node.AsInteger.Value, typeCode);
-                    case TomlNode a when a.IsDateTime: return node.AsDateTime.Value;
-                    default: return null; } // @formatter:on
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-        }
-
-        private static object GetValueByType(this TomlNode node, Type propertyType) // @formatter:off
-        {
-            switch (node) { // @formatter:off
-                case TomlNode a when a.IsBoolean:  return node.AsBoolean.Value;
-                case TomlNode a when a.IsString:   return node.AsString.Value;
-                case TomlNode a when a.IsFloat:    return Convert.ChangeType(node.AsFloat.Value, propertyType);
-                case TomlNode a when a.IsInteger:  return Convert.ChangeType(node.AsInteger.Value, propertyType);
-                case TomlNode a when a.IsDateTime: return node.AsDateTime.Value;
-                default: return null; } // @formatter:on
-        }
-
-        private static TomlNode GetTomlNode(object obj)
-        {
-            var valueType = obj.GetType();
-            switch (valueType)
-            {
-                case Type v when v == typeof(bool): return new TomlBoolean {Value = (bool) obj};
-                case Type v when v == typeof(string): return new TomlString {Value = (string) obj.ToString()};
-                case Type v when v.IsFloat(): return new TomlFloat {Value = (double) Convert.ChangeType(obj, TypeCode.Double)};
-                case Type v when v.IsInteger(): return new TomlInteger {Value = (long) Convert.ChangeType(obj, TypeCode.Int64)};
-                case Type v when v == typeof(DateTime): return new TomlDateTime {Value = (DateTime) obj};
-                default: throw new Exception($"Was not able to process item {valueType.Name}");
-            }
-        }
-
-        private static SortNode GetTomlSortNode(PropertyInfo prop, int? sortOrder, string comment, object data)
-        {
-            var propData = prop.GetValue(data);
-            switch (prop.PropertyType) // @formatter:off
-            {
-                case Type t when t == typeof(bool): return new SortNode{Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                            new TomlBoolean {Comment = comment, Value = (bool) propData}};
-                case Type t when t == typeof(string): return new SortNode{Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                            new TomlString {Comment = comment, Value = propData != null ? propData.ToString() : ""}};
-                case Type t when t.IsFloat(): double Converter()
-                    { return prop.PropertyType == typeof(float)
-                        ? (double) Convert.ChangeType(((float) propData).ToString(formatter), TypeCode.Double)
-                        : (double) Convert.ChangeType(propData, TypeCode.Double);}
-                    return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                            new TomlFloat {Comment = comment, Value = (double) Converter()}};
-                case Type t when t.IsInteger(): return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                            new TomlInteger {Comment = comment, Value = (long) Convert.ChangeType(propData, TypeCode.Int64)}};
-                case Type t when t == typeof(DateTime): return new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                            new TomlDateTime {Comment = comment, Value = (DateTime) propData}};
-            }
-            throw new Exception($"Was not able to process item {prop.Name} of type: {prop.PropertyType}"); // @formatter:on
-        }
-
-        private static readonly string formatter = "0." + new string('#', 60);
-
-        private static bool IsFloat(this Type type)
-        {
-            return // @formatter:off
-                type == typeof(float)  ||
-                type == typeof(double) ||
-                type == typeof(decimal);
-        } // @formatter:on
-
-        private static bool IsInteger(this Type type)
-        {
-            return // @formatter:off
-                type == typeof(sbyte)  ||
-                type == typeof(byte)   ||
-                type == typeof(short)  ||
-                type == typeof(ushort) ||
-                type == typeof(int)    ||
-                type == typeof(uint)   ||
-                type == typeof(long)   ||
-                type == typeof(ulong);
-        } // @formatter:on
-
-        private static object GetPropertyValue(this object src, string propName,
-            BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public) =>
-            src.GetType().GetProperty(propName, bindingAttr)?.GetValue(src, null);
-
-        private static void SetPropertyValue<T>(this object src, string propName, T propValue,
-            BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public) =>
-            src.GetType().GetProperty(propName, bindingAttr)?.SetValue(src, propValue);
-
         #endregion
     }
 
-    #region Generic Creation
+    #region Data Types
 
-    public static class CreateGeneric
-    {
-        public static object Collection(TomlNode[] array, Type valueType, Type propertyType)
-        {
-            Type listType;
-            var list = (IList) Activator.CreateInstance(listType = typeof(List<>).MakeGenericType(valueType));
-
-            foreach (var value in array)
-            {
-                if (value == null) continue;
-
-                Enum.TryParse(valueType.Name, out TypeCode typeCode);
-                var nodeValue = value.GetNodeValue(typeCode);
-                if (nodeValue != null) list.Add(nodeValue);
-                else Console.WriteLine(new Exception($"{propertyType.Name} value is null. This is unacceptable."));
-            }
-
-            return propertyType.IsArray ? listType.GetMethod("ToArray")?.Invoke(list, null) : list;
-        }
-    }
-
-    #endregion
-
-    #region Helper Classes
-
-    public struct SortNode
+    internal struct SortNode
     {
         public string Name { get; set; }
         public TomlNode Value { get; set; }
@@ -436,19 +414,31 @@ namespace Tommy.Serializer
 
     #region Attribute Classes
 
+    /// <summary>
+    /// Designates a class as a Toml Table and applies all contained properties as children of that table
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
     public class TommyTableName : Attribute
     {
-        public string TableName { get; }
+         /// <summary>
+         /// String value which will be used as the Toml Table name
+         /// </summary>
+         public string TableName { get; }
 
         /// <summary> Designates a class as a Toml Table and applies all contained properties as children of that table </summary>
         /// <param name="tableName">String value which will be used as the Toml Table name</param>
         public TommyTableName(string tableName) => TableName = tableName;
     }
 
+    /// <summary>
+    ///  Adds a toml comment to a property or field
+    /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class TommyComment : Attribute
     {
+        /// <summary>
+        /// String value which will be used as a comment for the property/field
+        /// </summary>
         public string Value { get; }
 
         /// <summary> Adds a toml comment to a property or field </summary>
@@ -456,9 +446,14 @@ namespace Tommy.Serializer
         public TommyComment(string comment) => Value = comment;
     }
 
+    /// <summary> Determines the order in which the properties will be written to file, sorted by numeric value with 0 being
+    /// the first entry but below the table name (if applicable). </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class TommySortOrder : Attribute
     {
+        /// <summary>
+        /// Int value representing the order in which this item will appear in the Toml file
+        /// </summary>
         public int SortOrder { get; }
 
         /// <summary> Determines the order in which the properties will be written to file, sorted by numeric value with 0 being
