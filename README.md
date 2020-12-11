@@ -1,14 +1,15 @@
 
-# TommyExtensions
+# Tommy.Serializer
 
 #### NOTE: Work in progress. Not quite fully featured/functional yet.
 The primary goal of this library is to add automatic serialization/deserialization of a class instance to the [Tommy Toml library](https://github.com/dezhidki/Tommy).
 
-##### At the current moment, serializing an instance of a class/data model of properties will/should work with most primary data types. Deserialization back from file to a class instance will come next.
+##### ~~At the current moment, serializing an instance of a class/data model of properties will/should work with most primary data types. Deserialization back from file to a class instance will come next.~~
+##### (De)Serialization of a class instance to/from a file has been implemented, along with the ability to work with List<primitive>, Primitive[], and basic Dictionary<primitive, primitive> 
 
 ## Installation
 
-Currently, to install this extension either download the [extensions file](https://github.com/instance-id/TommyExtensions/blob/main/TommyExtensions/TommyExtensions.cs)
+Currently, to install this extension either download the [extensions file](https://github.com/instance-id/Tommy.Serializer/blob/main/Tommy.Serializer/TommySerializer.cs)
 and add it to your project, or create a new C# script in your project and simply copy and paste the contents of the script.
 I may look into making a nuget package of it as well.
 ## Components
@@ -129,12 +130,12 @@ public string TestIgnoreProperty { get; set; }
 
 ### Single Data Object to File
 ```c#
-using instance.id.TommyExtensions;
+using Tommy.Serializer;
 
 TestData testData = new TestData();
 string path = "path/to/TestData.toml";
 
-TommyExtensions.ToTomlFile(testData, path);
+TommySerializer.ToTomlFile(testData, path);
 ```
 
 ### Multiple Data Objects to Single File
@@ -145,7 +146,7 @@ var testData = new TestData();
 var testData2 = new TestData2();
 var path = "path/to/TestData.toml";
 
-TommyExtensions.ToTomlFile(new object[] {testData, testData2}, path);
+Tommy.Serializer.ToTomlFile(new object[] {testData, testData2}, path);
 ```
 
 ### Multiple Data Objects to Multiple Files
@@ -157,8 +158,8 @@ var path = "path/to/TestData.toml";
 var testData2 = new TestData2();
 var path2 = "path/to/TestData2.toml";
 
-TommyExtensions.ToTomlFile(testData, path);
-TommyExtensions.ToTomlFile(testData, path2);
+TommySerializer.ToTomlFile(testData, path);
+TommySerializer.ToTomlFile(testData, path2);
 ```
 
 ## Included Example

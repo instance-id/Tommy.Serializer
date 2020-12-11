@@ -1,5 +1,5 @@
 ﻿// ----------------------------------------------------------------------------
-// -- Project : https://github.com/instance-id/TommyExtensions               --
+// -- Project : https://github.com/instance-id/Tommy.Serializer               --
 // -- instance.id 2020 | http://github.com/instance-id | http://instance.id  --
 // ----------------------------------------------------------------------------
 
@@ -7,9 +7,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-// using MarkdownTable;
 
-namespace instance.id.TommyExtensions.Demo
+namespace Tommy.Serializer.Demo
 {
     class Program
     {
@@ -22,14 +21,14 @@ namespace instance.id.TommyExtensions.Demo
             var testData2 = new TestData2();
 
             // -- Takes the TestData class and writes it's default values to disk.
-            TommyExtensions.ToTomlFile(testData, path);
+            TommySerializer.ToTomlFile(testData, path);
 
             // -- Write both TestData and TestData2 values to single file.
-            TommyExtensions.ToTomlFile(new object[] {testData, testData2}, pathCombined);
+            TommySerializer.ToTomlFile(new object[] {testData, testData2}, pathCombined);
 
             // ---------------
             // -- Reads the file created from TestData and displays the values in the console.
-            TestDataNoDefault loadTestData  = TommyExtensions.FromTomlFile<TestDataNoDefault>(path);
+            TestDataNoDefault loadTestData  = TommySerializer.FromTomlFile<TestDataNoDefault>(path);
 
             string classData = null;
             var props = loadTestData.GetType().GetProperties();

@@ -1,9 +1,9 @@
 ﻿// ----------------------------------------------------------------------------
-// -- Project : https://github.com/instance-id/TommyExtensions               --
+// -- Project : https://github.com/instance-id/Tommy.Serializer               --
 // -- instance.id 2020 | http://github.com/instance-id | http://instance.id  --
 // ----------------------------------------------------------------------------
 
-namespace instance.id.TommyExtensions.Demo
+namespace Tommy.Serializer.Demo
 {
     [TommyTableName("nametest2")]
     public class TestData2

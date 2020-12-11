@@ -1,5 +1,5 @@
 ﻿// ----------------------------------------------------------------------------
-// -- Project : https://github.com/instance-id/TommyExtensions               --
+// -- Project : https://github.com/instance-id/Tommy.Serializer              --
 // -- instance.id 2020 | http://github.com/instance-id | http://instance.id  --
 // ----------------------------------------------------------------------------
 
@@ -14,57 +14,10 @@ using Tommy;
 // ReSharper disable ClassNeverInstantiated.Global
 // ReSharper disable PatternAlwaysOfType
 
-namespace instance.id.TommyExtensions
+namespace Tommy.Serializer
 {
-    public static class TommyExtensions
+    public static class TommySerializer
     {
-        public static void TestToTomlFile(string path)
-        {
-            Dictionary<string, string> dict = new Dictionary<string, string>
-            {
-                {"string1", "string11"},
-                {"string2", "string22"},
-                {"string3", "string33"}
-            };
-
-            TomlTable tomlTable = new TomlTable();
-            TomlTable tomlDataTable = new TomlTable();
-
-            var dictKeys = new TomlArray();
-            var dictValues = new TomlArray();
-
-            var i = 0;
-            foreach (var kv in dict)
-            {
-                dictKeys[i] = new TomlString {Value = kv.Key};
-                dictValues[i] = new TomlString {Value = kv.Value};
-                i++;
-            }
-
-            tomlDataTable.Add($"{nameof(dict)}Keys", dictKeys);
-            tomlDataTable.Add($"{nameof(dict)}Values", dictValues);
-
-            tomlTable["Dictionary"] = tomlDataTable;
-
-            try
-            {
-                // -- Writes the Toml file to disk -----------------------
-                using (StreamWriter writer = new StreamWriter(path, false))
-                {
-                    tomlTable.WriteTo(writer);
-                    writer.Flush();
-                }
-
-                Console.WriteLine($"File saved to: {path}");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-        }
-
-
         /// <summary>
         /// Reflectively determines the property types and values of the passed class instance and outputs a Toml file
         /// </summary>

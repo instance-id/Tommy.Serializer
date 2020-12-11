@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\TommyExtensions\TommyExtensions.csproj" />
+      <ProjectReference Include="..\Tommy.Serializer\Tommy.Serializer.csproj" />
     </ItemGroup>
 
 </Project>
