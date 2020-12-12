@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -27,9 +28,10 @@ namespace Tommy.Serializer
         /// </summary>
         /// <param name="data">The class instance in which the properties will be used to create a Toml file </param>
         /// <param name="path">The destination path in which to create the Toml file</param>
-        public static void ToTomlFile(object data, string path)
+        /// <param name="writeToMemory">Write to <see cref="System.IO.MemoryStream"/>. If omitted, a standard <see cref="System.IO.StreamWriter"/> will be used. </param>
+        public static MemoryStream ToTomlFile(object data, string path, bool writeToMemory = false)
         {
-            ToTomlFile(new[] {data}, path);
+            return ToTomlFile(new[] {data}, path, writeToMemory);
         }
 
         /// <summary>
@@ -37,12 +39,13 @@ namespace Tommy.Serializer
         /// </summary>
         /// <param name="datas">The class instances in which the properties will be used to create a Toml file </param>
         /// <param name="path">The destination path in which to create the Toml file</param>
-        public static void ToTomlFile(object[] datas, string path)
+        /// <param name="writeToMemory">Write to <see cref="System.IO.MemoryStream"/>. If omitted, a standard <see cref="System.IO.StreamWriter"/> will be used. </param>
+        public static MemoryStream ToTomlFile(object[] datas, string path, bool writeToMemory = false)
         {
             if (datas == null || datas.Length == 0)
             {
                 Console.WriteLine("Error: object parameters are null.");
-                return;
+                return null;
             }
 
             TomlTable tomlTable = new TomlTable();
@@ -153,44 +156,45 @@ namespace Tommy.Serializer
                 }
             }
 
-            try
-            {
-                // -- Writes the Toml file to disk -----------------------
-                using (StreamWriter writer = new StreamWriter(path, false))
-                {
-                    tomlTable.WriteTo(writer);
-                    writer.Flush();
-                }
-
-                Console.WriteLine($"File saved to: {path}");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            if (writeToMemory) return WriteToMemory(tomlTable);
+            else WriteToDisk(tomlTable, path);
+            return null;
         }
 
         /// <summary>
         /// Creates a new instance of Type <typeparamref name="T"/> and parses Toml file from <paramref name="path"/>
         /// </summary>
         /// <param name="path">The full path to the existing Toml file you wish to parse</param>
+        /// <param name="memoryStream">Instead of reading from a file, a MemoryStream can be used.</param>
         /// <typeparam name="T">The Type of class in which the parsed Toml data will be assigned</typeparam>
         /// <returns>An instantiated class of Type <typeparamref name="T"/></returns>
-        public static T FromTomlFile<T>(string path) where T : class, new()
+        public static T FromTomlFile<T>(string path, MemoryStream memoryStream = null) where T : class, new()
         {
             try
             {
                 TomlTable table;
                 var dataClass = Activator.CreateInstance<T>();
 
-                using (StreamReader reader = new StreamReader(File.OpenRead(path)))
+                Stream stream; // @formatter:off
+                if (memoryStream != null)
                 {
-                    using (TOMLParser parser = new TOMLParser(reader))
+                    using (stream = new MemoryStream(memoryStream.ToArray(), false))
+                    using (StreamReader reader = new StreamReader(stream))
                     {
-                        table = parser.Parse();
+                        using (TOMLParser parser = new TOMLParser(reader)) { table = parser.Parse(); }
                     }
                 }
+                else
+                {
+                    using (stream = File.OpenRead(path))
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        using (TOMLParser parser = new TOMLParser(reader)) { table = parser.Parse(); }
+                    }
+                } // @formatter:on
+
+                stream.Close();
+                stream.Dispose();
 
                 var tableName = typeof(T).GetCustomAttribute<TommyTableName>()?.TableName ?? typeof(T).Name;
                 var properties = typeof(T).GetProperties();
@@ -232,7 +236,7 @@ namespace Tommy.Serializer
                         var array = tableData[key].AsArray.RawArray.ToArray();
 
                         if (valueType.GetInterface(nameof(IConvertible)) != null)
-                            dataClass.SetPropertyValue(key, CreateGenericList(array, valueType, propertyType));
+                            dataClass.SetPropertyValue(key, CreateGenericList(array, propertyType));
                         else Console.WriteLine($"Warning: {valueType.Name} is not able to be converted.");
                     }
                 }
@@ -245,6 +249,25 @@ namespace Tommy.Serializer
                 throw;
             }
         }
+
+        [ExcludeFromCodeCoverage]
+        internal static void WriteToDisk(TomlTable tomlTable, string path)
+        {
+            // @formatter:off -- Writes the Toml file to disk ------------
+            try { using (var writer = new StreamWriter(path, false))
+                { tomlTable.WriteTo(writer); writer.Flush(); }
+                Console.WriteLine($"File saved to: {path}"); }
+            catch (Exception e) { Console.WriteLine(e); throw; }
+        } // @formatter:on
+
+        internal static MemoryStream WriteToMemory(TomlTable tomlTable)
+        {
+            // @formatter:off -- Writes the Toml file to disk ------------
+            try { var streamMem = new MemoryStream();
+                using (var writer = new StreamWriter(streamMem))
+                { tomlTable.WriteTo(writer); writer.Flush(); } return streamMem;
+            } catch (Exception e) { Console.WriteLine(e); throw; }
+        } // @formatter:on
 
         #region Extension Methods
 
@@ -272,12 +295,14 @@ namespace Tommy.Serializer
                 : (double) Convert.ChangeType(obj, TypeCode.Double);
         }
 
-        private static bool IsFloat(this Type type) => // @formatter:off
+        internal static bool IsNumeric(this Type type) => (type.IsFloat() || type.IsInteger());
+
+        internal static bool IsFloat(this Type type) => // @formatter:off
             type == typeof(float)  ||
             type == typeof(double) ||
             type == typeof(decimal); // @formatter:on
 
-        private static bool IsInteger(this Type type) => // @formatter:off
+        internal static bool IsInteger(this Type type) => // @formatter:off
             type == typeof(sbyte)  ||
             type == typeof(byte)   ||
             type == typeof(short)  ||
@@ -304,7 +329,7 @@ namespace Tommy.Serializer
 
         #region TomlNodes
 
-        private static object GetNodeValue(this TomlNode node, TypeCode typeCode) // @formatter:off
+        internal static object GetNodeValue(this TomlNode node, TypeCode typeCode) // @formatter:off
         {
             return node switch
             {
@@ -316,7 +341,7 @@ namespace Tommy.Serializer
                 _ => null };  // @formatter:on
         }
 
-        private static object GetValueByType(this TomlNode node, Type propertyType) // @formatter:off
+        internal static object GetValueByType(this TomlNode node, Type propertyType) // @formatter:off
         {
             return node switch
             {
@@ -328,7 +353,7 @@ namespace Tommy.Serializer
                 _ => null }; // @formatter:on
         }
 
-        private static TomlNode GetTomlNode(object obj, Type valueType = null)
+        internal static TomlNode GetTomlNode(object obj, Type valueType = null)
         {
             if (valueType == null) valueType = obj.GetType();
 
@@ -343,7 +368,7 @@ namespace Tommy.Serializer
             }; // @formatter:on
         }
 
-        private static SortNode GetTomlSortNode(PropertyInfo prop, int? sortOrder, string comment, object data)
+        internal static SortNode GetTomlSortNode(PropertyInfo prop, int? sortOrder, string comment, object data)
         {
             var propData = prop.GetValue(data); // @formatter:off
 
@@ -370,8 +395,15 @@ namespace Tommy.Serializer
 
         #region Generic Creation
 
-        private static object CreateGenericList(TomlNode[] array, Type valueType, Type propertyType)
+        internal static object CreateGenericList(TomlNode[] array, Type propertyType)
         {
+            var valueType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
+            if (valueType == null)
+            {
+                Console.WriteLine($"Warning: Could not find argument type for property: {propertyType.Name}.");
+                return null;
+            }
+
             Type listType;
             var list = (IList) Activator.CreateInstance(listType = typeof(List<>).MakeGenericType(valueType));
 
@@ -388,7 +420,7 @@ namespace Tommy.Serializer
             return propertyType.IsArray ? listType.GetMethod("ToArray")?.Invoke(list, null) : list;
         }
 
-        private static object CreateGenericDictionary(TomlNode tableData, Type propertyType)
+        internal static object CreateGenericDictionary(TomlNode tableData, Type propertyType)
         {
             var valueType = propertyType.GetGenericArguments();
             if (valueType.Length < 2)
