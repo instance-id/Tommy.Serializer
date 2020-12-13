@@ -1,5 +1,5 @@
 ﻿// ----------------------------------------------------------------------------
-// -- Project : https://github.com/instance-id/Tommy.Serializer               --
+// -- Project : https://github.com/instance-id/Tommy.Serializer              --
 // -- instance.id 2020 | http://github.com/instance-id | http://instance.id  --
 // ----------------------------------------------------------------------------
 
