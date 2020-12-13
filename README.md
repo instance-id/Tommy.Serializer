@@ -225,12 +225,33 @@ If you download the complete solution from this repo and run the Demo project, i
 [TommyTableName("nametest")]
 public class TestData
 {
+    [TommyInclude]
+    private string TestIncludeProperty { get; set; } = "I should show up in the created file even when private";
+
+    [TommyInclude]
+    [TommySortOrder(4)]
+    [TommyComment(@" Comment for private field
+     This item should appear fifth as it's sort order is : 4")]
+    private string testIncludePrivateField = "I should be included even when private";
+
+    [TommyInclude]
+    [TommySortOrder(3)]
+    [TommyComment(@" Comment for public field
+     This item should appear fourth as it's sort order is : 3")]
+    public string TestIncludePublicField = "Public string Data";
+
+    [TommyIgnore]
+    public string TestIgnoreProperty { get; set; } = "I should not show up in the created file";
+
+    [TommyComment(" Comment for date property")]
+    public DateTime TestDateComment { get; set; } = DateTime.Now;
+
     [TommyComment(" Comment for string property\n Testing second line comment\n" +
                   "This and subsequent items should appear after the sorted properties")]
     public string TestStringComment { get; set; } = "Test String";
 
     [TommyComment(@" This item should be a blank string : Testing null value")]
-    public string TestString { get; set; }
+    public string TestNullString { get; set; }
 
     [TommyComment(@" Comment testing multiline verbatim strings #1
      Comment testing multiline verbatim strings #2
@@ -248,8 +269,8 @@ public class TestData
     [TommySortOrder(1)]
     [TommyComment(@" Comment for ulong property  
      This item should appear second as it's sort order is : 1")]
-    public ulong TestUlongComment { get; set; } = 448543646457048970;
-    public ulong TestUlong { get; set; } = 448543646457048970;
+    public ulong TestUlongComment { get; set; } = 444543646457048001;
+    public ulong TestUlong { get; set; } = 444543646457048001;
 
     [TommySortOrder(2)]
     [TommyComment(@" Comment for float property 
@@ -276,8 +297,16 @@ public class TestData
     public List<string> TestStringListComment { get; set; } = new List<string> {"string1", "string2", "string3"};
     public List<string> TestStringList { get; set; } = new List<string> {"string1", "string2", "string3"};
 
-    [TommyIgnore]
-    public string TestIgnoreProperty { get; set; } = "I should not show up in the created file";
+    [TommyComment(@" Comment for ulong array property")]
+    public ulong[] TestULongArray { get; set; } = new ulong[] {448543646457048001, 448543646457048002, 448543646457048003};
+
+    [TommyComment(@" Comment for List<ulong> property")]
+    public List<ulong> TestULongList { get; set; } = new List<ulong> {448543646457048001, 448543646457048002, 448543646457048003};
+
+    [TommyComment(" Comment for Dictionary<K,V> property")]
+    public Dictionary<string, string> TestDictionaryComment { get; set; } =
+        new Dictionary<string, string>{{"string1Key", "string1Value"}, {"string2Key", "string2Value"}};
+
 }
 ```
 
@@ -288,17 +317,30 @@ public class TestData
 <summary>Output of Above Data Class</summary>
 
 ```toml
-[nametest]
-
+[tablename]
 # This item should appear first as it's sort order is : 0
 TestIntArray = [ 1, 2, 3, 4 ]
+
 # Comment for ulong property
 # This item should appear second as it's sort order is : 1
-TestUlongComment = 448543646457048970
+TestUlongComment = 444543646457048001
 
 # Comment for float property
 # This item should appear third as it's sort order is : 2
 TestFloatComment = 123.123
+
+# Comment for public field
+# This item should appear fourth as it's sort order is : 3
+TestIncludePublicField = "Public string Data"
+
+# Comment for private field
+# This item should appear fifth as it's sort order is : 4
+testIncludePrivateField = "I should be included even when private"
+
+TestIncludeProperty = "I should show up in the created file even when private"
+
+# Comment for date property
+TestDateComment = 2020-12-13 15:06:18
 
 # Comment for string property
 # Testing second line comment
@@ -306,7 +348,7 @@ TestFloatComment = 123.123
 TestStringComment = "Test String"
 
 # This item should be a blank string : Testing null value
-TestString = ""
+TestNullString = ""
 
 # Comment testing multiline verbatim strings #1
 # Comment testing multiline verbatim strings #2
@@ -323,7 +365,7 @@ TestIntComment = 1
 
 TestInt = 1
 
-TestUlong = 448543646457048970
+TestUlong = 444543646457048001
 
 TestFloat = 123.123
 
@@ -339,9 +381,22 @@ TestDecimal = 0.11
 
 # Comment for IntArray property
 TestIntArrayComment = [ 1, 2, 3, 4 ]
+
 # Comment for List<string> property
 TestStringListComment = [ "string1", "string2", "string3" ]
+
 TestStringList = [ "string1", "string2", "string3" ]
+
+# Comment for ulong array property
+TestULongArray = [ 448543646457048001, 448543646457048002, 448543646457048003 ]
+
+# Comment for List<ulong> property
+TestULongList = [ 448543646457048001, 448543646457048002, 448543646457048003 ]
+
+# Comment for Dictionary<K,V> property
+[tablename.TestDictionaryComment]
+DictionaryKeys = [ "string1Key", "string2Key" ]
+DictionaryValues = [ "string1Value", "string2Value" ]
 
 ```
 
