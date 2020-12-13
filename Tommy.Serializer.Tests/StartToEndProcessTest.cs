@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Tommy.Serializer.Tests
 {
-    public class ToTomlFileTests
+    public class StartToEndProcessTest
     {
         [Fact]
         public void ProcessTest()

@@ -11,6 +11,15 @@ namespace Tommy.Serializer.Demo
     [TommyTableName("tablename")]
     public class TestDataNoDefault
     {
+        [TommyInclude]
+        private string TestIncludeProperty { get; set; }
+
+        [TommyInclude]
+        private string testIncludePrivateField;
+
+        [TommyInclude]
+        public string TestIncludePublicField;
+
         [TommyIgnore]
         public string TestIgnoreProperty { get; set; }
 

@@ -11,6 +11,19 @@ namespace Tommy.Serializer.Demo
     [TommyTableName("tablename")]
     public class TestData
     {
+        [TommyInclude]
+        private string TestIncludeProperty { get; set; } = "I should show up in the created file even when private";
+
+        [TommyInclude]
+        [TommySortOrder(4)]
+        [TommyComment(" Comment for private field")]
+        private string testIncludePrivateField = "I should be included even when private";
+
+        [TommyInclude]
+        [TommySortOrder(3)]
+        [TommyComment(" Comment for public field")]
+        public string TestIncludePublicField = "Public string Data";
+
         [TommyIgnore]
         public string TestIgnoreProperty { get; set; } = "I should not show up in the created file";
 

@@ -48,6 +48,7 @@ public class TestData { //... }
 </tr>
 <!-- ---------------------------------------------- -->
 <tr>
+<a name="tommycomment"></a>
 <td valign="top" style="padding-top: 25px"> TommyComment </td>
 <td valign="top">
 
@@ -70,6 +71,7 @@ TestString = "Test String"
 </tr>
 <!-- ---------------------------------------------- -->
 <tr>
+<a name="tommysortorder"></a>
 <td valign="top" style="padding-top: 25px"> TommySortOrder </td>
 <td valign="top">
 
@@ -102,6 +104,30 @@ TestFloat1 = 234.234
 </tr>
 <!-- ---------------------------------------------- -->
 <tr>
+<a name="tommyinclude"></a>
+<td valign="top" style="padding-top: 25px"> TommyInclude </td>
+<td valign="top">
+
+```c#
+// Designates a private field to be included by the Tommy processor
+[TommyInclude]
+private string testIncludeField = "I'm private, but here we are..";
+```
+
+</td>
+<td valign="top">
+
+```toml
+testIncludeField = "I'm private, but here we are.."
+
+  
+```
+
+</td>
+</tr>
+<!-- ---------------------------------------------- -->
+<tr>
+<a name="tommyignore"></a>
 <td valign="top" style="padding-top: 25px"> TommyIgnore </td>
 <td valign="top">
 
@@ -127,6 +153,12 @@ public string TestIgnoreProperty { get; set; }
 </details>
 
 ## Usage
+
+While attributes are included for specific situations, if a property or field is public, they will be included automatically, unless the [\[TommyIgnore\]](#tommyignore) attribute is applied to them.
+
+### Saving to file
+
+---
 
 ### Single Data Object to File
 ```c#
@@ -161,6 +193,18 @@ var path2 = "path/to/TestData2.toml";
 TommySerializer.ToTomlFile(testData, path);
 TommySerializer.ToTomlFile(testData, path2);
 ```
+
+### Data from file
+
+---
+
+```c#
+var path = "path/to/TestData.toml";
+
+TestData testData  = TommySerializer.FromTomlFile<TestData>(path);
+```
+
+---
 
 ## Included Example
 

@@ -15,7 +15,7 @@ using Xunit.Sdk;
 
 namespace Tommy.Serializer.Tests
 {
-    public class FromTomlFileTests
+    public class ComponentTests
     {
         [Fact]
         public void TestGetTomlNode()

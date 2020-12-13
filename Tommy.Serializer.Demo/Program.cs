@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace Tommy.Serializer.Demo
@@ -31,9 +32,18 @@ namespace Tommy.Serializer.Demo
             TestDataNoDefault loadTestData  = TommySerializer.FromTomlFile<TestDataNoDefault>(path);
 
             string classData = null;
-            var props = loadTestData.GetType().GetProperties();
+            var props = loadTestData.GetType().GetProperties(Utilities.bindingFlags)
+                .Where(x => !Attribute.IsDefined(x, typeof(TommyIgnore)));
+
             foreach (var prop in props)
                 classData += $"Name: {prop.Name} Value: {loadTestData.GetPropertyValue(prop.Name)}\n";
+
+            var fields = loadTestData.GetType().GetFields(Utilities.bindingFlags)
+                .Where(x => !x.Name.Contains("k__BackingField")
+                            && !Attribute.IsDefined(x, typeof(TommyIgnore)));
+
+            foreach (var field in fields)
+                classData += $"Name: {field.Name} Value: {loadTestData.GetFieldValue(field.Name)}\n";
 
             Console.WriteLine(classData);
          }
@@ -43,13 +53,14 @@ namespace Tommy.Serializer.Demo
 
     public static class Utilities
     {
-        public static object GetPropertyValue(
-            this object src,
-            string propName,
-            BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public)
-        {
-            return src.GetType().GetProperty(propName, bindingAttr)?.GetValue(src, null);
-        }
+
+        public static BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+        public static object GetPropertyValue(this object src, string propName ) =>
+            src.GetType().GetProperty(propName, bindingFlags)?.GetValue(src, null);
+
+        public static object GetFieldValue(this object src, string fieldName ) =>
+            src.GetType().GetField(fieldName, bindingFlags)?.GetValue(src);
 
         /// <summary>
         /// Check whether the application is running in debug mode in order to determine where to export the file
