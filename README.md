@@ -222,7 +222,7 @@ If you download the complete solution from this repo and run the Demo project, i
 <summary>Data Class</summary>
 
 ```c#
-[TommyTableName("nametest")]
+[TommyTableName("tablename")]
 public class TestData
 {
     [TommyInclude]
