@@ -60,19 +60,20 @@ namespace Tommy.Serializer
                     TomlTable tomlDataTable = new TomlTable();
                     Type type = data.GetType();
 
-                    // -- Check object for table name attribute ------------------
+                    // -- Check object for table name attribute --------------------
                     string tableName = type.GetCustomAttribute<TommyTableName>()?.TableName;
 
-                    // -- Iterate the properties of the object -------------------
+                    // -- Iterate the properties of the object ---------------------
                     PropertyInfo[] props = type.GetProperties();
                     foreach (var prop in props)
                     {
-                        // -- Check if property is to be ignored -----------------
-                        // -- If so, continue on to the next property ------------
+                        // -- Check if property is to be ignored -------------------
+                        // -- If so, continue on to the next property --------------
                         if (Attribute.IsDefined(prop, typeof(TommyIgnore))) continue;
 
-                        // -- Check if property has comment attribute ------------
+                        // -- Check if property has comment attribute --------------
                         var comment = prop.GetCustomAttribute<TommyComment>()?.Value;
+                        // -- Check if property has SortOrder attribute ------------
                         var sortOrder = prop.GetCustomAttribute<TommySortOrder>()?.SortOrder;
                         var propertyValue = data.GetPropertyValue(prop.Name);
                         var propertyType = prop.PropertyType;
@@ -80,7 +81,12 @@ namespace Tommy.Serializer
                         // -- Check each property type in order to
                         // -- determine which type of TomlNode to create
                         if (propertyType == typeof(string) || (propertyType.GetInterface(nameof(IEnumerable)) == null && !propertyType.IsArray))
-                            tomlData.Add(GetTomlSortNode(prop, sortOrder, comment, data));
+                        {
+                            var valueNode = GetTomlNode(propertyValue, propertyType);
+                            valueNode.Comment = comment;
+
+                            tomlData.Add(new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value = valueNode});
+                        }
 
                         else if (propertyType.GetInterface(nameof(IEnumerable)) != null && propertyType.GetInterface(nameof(IDictionary)) != null)
                         {
@@ -94,51 +100,32 @@ namespace Tommy.Serializer
                             var dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, propertyType);
                             dictionaryNode.Comment = comment;
 
-                            tomlData.Add(new SortNode
-                            {
-                                Name = prop.Name,
-                                SortOrder = sortOrder ?? -1,
-                                Value = dictionaryNode
-                            });
+                            tomlData.Add(new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value = dictionaryNode});
                         }
                         else
                         {
                             var propAsList = propertyValue as IList;
-                            var tomlArray = new TomlArray {Comment = comment};
+                            var tomlArray = new TomlArray {Comment = comment}; // @formatter:off
                             var propArgType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
 
-                            if (propAsList != null)
-                                for (var i = 0; i < propAsList.Count; i++)
-                                {
-                                    if (propAsList[i] == null) throw new ArgumentNullException($"Error: collection value cannot be null");
-                                    tomlArray.Add(GetTomlNode(propAsList[i], propArgType));
-                                }
-                            else
+                            if (propAsList == null) { Console.WriteLine($"{prop.Name} could not be cast as IList."); continue; } // @formatter:on
+
+                            for (var i = 0; i < propAsList.Count; i++)
                             {
-                                Console.WriteLine($"{prop.Name} could not be cast as IList.");
-                                continue;
+                                if (propAsList[i] == null) throw new ArgumentNullException($"Error: collection value cannot be null");
+                                tomlArray.Add(GetTomlNode(propAsList[i], propArgType));
                             }
 
                             tomlData.Add(new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value = tomlArray});
                         }
                     }
 
-                    // -- Check if sorting needs to be done to properties. ---
-                    // -- Properties that do not have a sort attribute are ---
-                    // -- given a sort order of the max sort int +1 and ------
-                    // -- appear after the sorted properties -----------------
+                    // -- Check if sorting needs to be done to properties. ---------
+                    // -- Properties that do not have a sort attribute are ---------
+                    // -- given a sort order of the max sort int +1 and ------------
+                    // -- appear after the sorted properties -----------------------
                     var maxSortInt = (from l in tomlData select l.SortOrder).Max();
-                    if (maxSortInt > -1)
-                    {
-                        for (var i = 0; i < tomlData.Count; i++)
-                        {
-                            var n = tomlData[i];
-                            if (n.SortOrder > -1) continue;
-                            tomlData[i] = new SortNode {SortOrder = maxSortInt + 1, Value = n.Value, Name = n.Name};
-                        }
-
-                        tomlData = tomlData.OrderBy(n => n.SortOrder).ToList();
-                    }
+                    if (maxSortInt > -1) tomlData = tomlData.SortNodes(maxSortInt);
 
                     tomlData.ForEach(n => { tomlDataTable[n.Name] = n.Value; });
 
@@ -214,13 +201,13 @@ namespace Tommy.Serializer
 
                     if (!tableData[key].HasValue && !tableData[key].IsTable) continue;
 
+                    // -- Determine if property is not a collection or table -------
                     if (propertyType == typeof(string) && tableData[key].IsString || !tableData[key].IsArray && !tableData[key].IsTable)
                         dataClass.SetPropertyValue(key, GetValueByType(tableData[key], propertyType));
 
+                    // -- Determine if property is a Toml Table/IDictionary --------
                     else if (tableData[key].IsTable && propertyType.GetInterface(nameof(IEnumerable)) != null && propertyType.GetInterface(nameof(IDictionary)) != null)
-                    {
                         dataClass.SetPropertyValue(key, CreateGenericDictionary(tableData[key], propertyType));
-                    }
 
                     else
                     {
@@ -317,17 +304,29 @@ namespace Tommy.Serializer
 
         #region Property Get/Set
 
-        private static object GetPropertyValue(this object src, string propName,
+        internal static object GetPropertyValue(this object src, string propName,
             BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public) =>
             src.GetType().GetProperty(propName, bindingAttr)?.GetValue(src, null);
 
-        private static void SetPropertyValue<T>(this object src, string propName, T propValue,
+        internal static void SetPropertyValue<T>(this object src, string propName, T propValue,
             BindingFlags bindingAttr = BindingFlags.Instance | BindingFlags.Public) =>
             src.GetType().GetProperty(propName, bindingAttr)?.SetValue(src, propValue);
 
         #endregion
 
         #region TomlNodes
+
+        internal static List<SortNode> SortNodes(this List<SortNode> tomlData, int maxSortInt)
+        {
+            for (var i = 0; i < tomlData.Count; i++)
+            {
+                var n = tomlData[i];
+                if (n.SortOrder > -1) continue;
+                tomlData[i] = new SortNode {SortOrder = maxSortInt + 1, Value = n.Value, Name = n.Name};
+            }
+
+            return tomlData.OrderBy(n => n.SortOrder).ToList();
+        }
 
         internal static object GetNodeValue(this TomlNode node, TypeCode typeCode) // @formatter:off
         {
@@ -353,42 +352,19 @@ namespace Tommy.Serializer
                 _ => null }; // @formatter:on
         }
 
-        internal static TomlNode GetTomlNode(object obj, Type valueType = null)
+        internal static TomlNode GetTomlNode(this object obj, Type valueType = null)
         {
             if (valueType == null) valueType = obj.GetType();
 
             return valueType switch
             {
-                Type v when v == typeof(bool) => new TomlBoolean {Value = (bool) obj},
-                Type v when v == typeof(string) => new TomlString {Value = obj.ToString() != null ? obj.ToString() : ""},
+                Type v when v == typeof(bool) => new TomlBoolean {Value = (bool) obj },
+                Type v when v == typeof(string) => new TomlString {Value = (string) obj != null ? obj.ToString() : ""},
                 Type v when v.IsFloat() => new TomlFloat {Value = FloatConverter(valueType, obj)},
                 Type v when v.IsInteger() => new TomlInteger {Value = (long) Convert.ChangeType(obj, TypeCode.Int64)},
                 Type v when v == typeof(DateTime) => new TomlDateTime {Value = (DateTime) obj},
                 _ => throw new Exception($"Was not able to process item {valueType.Name}")
             }; // @formatter:on
-        }
-
-        internal static SortNode GetTomlSortNode(PropertyInfo prop, int? sortOrder, string comment, object data)
-        {
-            var propData = prop.GetValue(data); // @formatter:off
-
-            return prop.PropertyType switch {
-                Type t when t == typeof(bool) => new SortNode{Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                    new TomlBoolean {Comment = comment, Value = (bool) propData}},
-
-                Type t when t == typeof(string) => new SortNode{Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                    new TomlString {Comment = comment, Value = propData != null ? propData.ToString() : ""}},
-
-                Type t when t.IsFloat() => new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                    new TomlFloat {Comment = comment, Value = FloatConverter(prop.PropertyType, propData)}},
-
-                Type t when t.IsInteger() => new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                    new TomlInteger {Comment = comment, Value = (long) Convert.ChangeType(propData, TypeCode.Int64)}},
-
-                Type t when t == typeof(DateTime) => new SortNode {Name = prop.Name, SortOrder = sortOrder ?? -1, Value =
-                    new TomlDateTime {Comment = comment, Value = (DateTime) propData}},
-
-                _ => throw new Exception($"Was not able to process item {prop.Name} of type: {prop.PropertyType}") }; // @formatter:on
         }
 
         #endregion

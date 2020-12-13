@@ -9,11 +9,44 @@ using System.IO;
 using System.Linq;
 using FluentAssertions;
 using Xunit;
+using Xunit.Sdk;
+
+// ReSharper disable RedundantExplicitArrayCreation
 
 namespace Tommy.Serializer.Tests
 {
     public class FromTomlFileTests
     {
+        [Fact]
+        public void TestGetTomlNode()
+        {
+            var testData = new TestData();
+            var properties = testData.GetType().GetProperties();
+            for (int i = 0; i < properties.Length; i++)
+            {
+                var result = TommySerializer.GetTomlNode(properties[i].GetValue(testData), properties[i].PropertyType);
+                (result as TomlNode).Should().BeOfType(NodeLookup[properties[i].PropertyType]);
+            }
+
+            Action act = () => TommySerializer.GetTomlNode(12, typeof(TypeCode));
+
+            act.Should().Throw<Exception>()
+                .WithMessage($"Was not able to process item {typeof(TypeCode).Name}");
+        }
+
+        [Theory]
+        [MemberData(nameof(SortNodeData))]
+        public void TestSortingNodesOrder<T>(T[] nodes)
+        {
+            var nodeArray = nodes as SortNode[];
+            var nodeList = nodeArray!.ToList();
+            var sortedNodes = nodeList.SortNodes((from l in nodeList select l.SortOrder).Max());
+            var expectedResults = new[] {"intField", "floatField", "stringField", "boolField", "dateField"};
+
+            for (var i = 0; i < sortedNodes.Count; i++)
+                sortedNodes[i].Name.Should().Be(expectedResults[i]);
+        }
+
         [Theory]
         [MemberData(nameof(DictionaryData))]
         public void TestBuildDictionaryGeneric<T, V>(T[] keys, V[] values)
@@ -112,35 +145,74 @@ namespace Tommy.Serializer.Tests
 
         #region Data
 
+        public static Dictionary<Type, Type> NodeLookup = new Dictionary<Type, Type>
+        {
+            {typeof(float), typeof(TomlFloat)},
+            {typeof(int), typeof(TomlInteger)},
+            {typeof(bool), typeof(TomlBoolean)},
+            {typeof(long), typeof(TomlInteger)},
+            {typeof(double), typeof(TomlFloat)},
+            {typeof(ulong), typeof(TomlInteger)},
+            {typeof(string), typeof(TomlString)},
+            {typeof(decimal), typeof(TomlFloat)},
+            {typeof(DateTime), typeof(TomlDateTime)}
+        };
+
+        // public static IEnumerable<object[]> TomlNodeData
+        // {
+        //     get
+        //     {
+        //         yield return new object[] {typeof(TomlBoolean), (bool) true};
+        //         yield return new object[] {typeof(TomlFloat), (double) 12.45};
+        //         yield return new object[] {typeof(TomlFloat), (float) 12.45f};
+        //         yield return new object[] {typeof(TomlInteger), (int) 4321};
+        //         yield return new object[] {typeof(TomlInteger), (long) 1231231231231};
+        //         yield return new object[] {typeof(TomlInteger), (ulong) 444543646457048001};
+        //         yield return new object[] {typeof(TomlDateTime), DateTime.Parse("2020-12-12 15:36:16")};
+        //         yield return new object[] {typeof(TomlString), "String Data"};
+        //     }
+        // } // @formatter:on
+
+        public static IEnumerable<object[]> SortNodeData // @formatter:off
+        {
+            get { yield return new object[] {new SortNode[] {
+                new() { Name = "boolField",   SortOrder = -1, Value = new TomlBoolean  { Comment = "Comment for bool",   Value = true}},
+                new() { Name = "stringField", SortOrder = 2,  Value = new TomlString   { Comment = "Comment for string", Value = "String Value s"}},
+                new() { Name = "floatField",  SortOrder = 1,  Value = new TomlFloat    { Comment = "Comment for float",  Value = 1.432f}},
+                new() { Name = "intField",    SortOrder = 0,  Value = new TomlInteger  { Comment = "Comment for int",    Value = 6}},
+                new() { Name = "dateField",   SortOrder = -1, Value = new TomlDateTime { Comment = "Comment for Date",   Value =
+                    DateTime.Parse("2020-12-12 15:36:16")}}}}; }
+        } // @formatter:on
+
         public static IEnumerable<object[]> ArrayData
         {
-            get
+            get // @formatter:off
             {
-                yield return new object[] {new int[] {1, 2, 3, 4}};
-                yield return new object[] {new bool[] {true, false, true, false}};
-                yield return new object[] {new double[] {11.22, 22.33, 33.44, 44.55}};
-                yield return new object[] {new float[] {11.22f, 22.33f, 33.44f, 44.55f}};
-                yield return new object[] {new string[] {"one", "two", "three", "four"}};
-                yield return new object[] {new ulong[] {444543646457048001, 444543646457048002, 444543646457048003}};
+                yield return new object[] { new int[]    { 1, 2, 3, 4}};
+                yield return new object[] { new bool[]   { true, false, true, false}};
+                yield return new object[] { new double[] { 11.22, 22.33, 33.44, 44.55}};
+                yield return new object[] { new float[]  { 11.22f, 22.33f, 33.44f, 44.55f}};
+                yield return new object[] { new string[] { "one", "two", "three", "four"}};
+                yield return new object[] { new ulong[]  { 444543646457048001, 444543646457048002, 444543646457048003}};
             }
-        }
+        } // @formatter:on
 
         public static IEnumerable<object[]> DictionaryData
         {
-            get
+            get // @formatter:off
             {
-                yield return new object[] {new int[] {1, 2, 3, 4}, new int[] {4, 3, 2, 1}};
-                yield return new object[] {new int[] {4, 3, 2, 1}, new string[] {"one", "two", "three", "four"}};
-                yield return new object[] {new string[] {"one", "two", "three", "four"}, new int[] {4, 3, 2, 1}};
-                yield return new object[] {new string[] {"one", "two", "three", "four"}, new bool[] {true, false, true, false}};
-                yield return new object[] {new double[] {11.22, 22.33, 33.44, 44.55}, new float[] {11.22f, 22.33f, 33.44f, 44.55f}};
-                yield return new object[] {new float[] {11.22f, 22.33f, 33.44f, 44.55f}, new double[] {11.22, 22.33, 33.44, 44.55}};
-                yield return new object[] {new string[] {"one", "two", "three", "four"}, new string[] {"one", "two", "three", "four"}};
+                yield return new object[] { new int[]    { 1, 2, 3, 4}, new int[]                        { 4, 3, 2, 1}};
+                yield return new object[] { new int[]    { 4, 3, 2, 1}, new string[]                     { "one", "two", "three", "four"}};
+                yield return new object[] { new string[] { "one", "two", "three", "four"}, new int[]     { 4, 3, 2, 1}};
+                yield return new object[] { new string[] { "one", "two", "three", "four"}, new bool[]    { true, false, true, false}};
+                yield return new object[] { new double[] { 11.22, 22.33, 33.44, 44.55}, new float[]      { 11.22f, 22.33f, 33.44f, 44.55f}};
+                yield return new object[] { new float[]  { 11.22f, 22.33f, 33.44f, 44.55f}, new double[] { 11.22, 22.33, 33.44, 44.55}};
+                yield return new object[] { new string[] { "one", "two", "three", "four"}, new string[]  { "one", "two", "three", "four"}};
                 yield return new object[]
                 {
                     new ulong[] {444543646457048001, 444543646457048002, 444543646457048003},
                     new ulong[] {544543646457048001, 544543646457048002, 544543646457048003}
-                };
+                }; // @formatter:on
             }
         }
 

@@ -12,10 +12,9 @@ namespace Tommy.Serializer.Tests
             string originalData = null;
             string processedData = null;
 
-            var testData = new TestData();
+            var testData = new TestDataComments();
 
             var memoryStream = TommySerializer.ToTomlFile(testData, path, true);
-
             var loadTestData = TommySerializer.FromTomlFile<TestDataNoDefault>(path, memoryStream);
 
             var originalProperties = testData.GetType().GetProperties();
