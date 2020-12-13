@@ -4,8 +4,8 @@
 #### NOTE: Work in progress. Not quite fully featured/functional yet.
 The primary goal of this library is to add automatic serialization/deserialization of a class instance to the [Tommy Toml library](https://github.com/dezhidki/Tommy).
 
-##### ~~At the current moment, serializing an instance of a class/data model of properties will/should work with most primary data types. Deserialization back from file to a class instance will come next.~~
-##### (De)Serialization of a class instance to/from a file has been implemented, along with the ability to work with List<primitive>, Primitive[], and basic Dictionary<primitive, primitive> 
+##### (De)Serialization of a class instance to/from a file has been implemented, along with the ability to work with List<primitive>, Primitive[], and basic Dictionary<primitive, primitive>. If more advanced usage is required, just let me know.
+
 
 ## Installation
 
