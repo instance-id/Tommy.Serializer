@@ -53,7 +53,8 @@ public class TestData { //... }
 <td valign="top">
 
 ```c#
-// String value which will be used as a comment for the property/field
+// String value which will be used as a 
+// comment for the property/field
 [TommyComment(" Comment for string property")]  
 public string TestString {  get; set; }  = "Test String"
 ```
@@ -64,6 +65,7 @@ public string TestString {  get; set; }  = "Test String"
 ```toml
 # Comment for string property
 TestString = "Test String"
+  
   
 ```
 
@@ -76,7 +78,8 @@ TestString = "Test String"
 <td valign="top">
 
 ```c#
-// Determines the order in which the properties will be written to file
+// Determines the order in which the 
+// properties will be written to file
 [TommySortOrder(1)] 
 [TommyComment(" Sort order 1")]
 public float TestFloat1 { get; set; } = 234.234f;
@@ -98,6 +101,7 @@ TestFloat1 = 234.234
 
 
   
+  
 ```
 
 </td>
@@ -109,17 +113,19 @@ TestFloat1 = 234.234
 <td valign="top">
 
 ```c#
-// Designates a private field to be included by the Tommy processor
+// Designates a private field to be 
+// included by the Tommy processor
 [TommyInclude]
-private string testIncludeField = "I'm private, but here we are..";
+private string testIncludeField = "I'm private, so what?";
 ```
 
 </td>
 <td valign="top">
 
 ```toml
-testIncludeField = "I'm private, but here we are.."
+testIncludeField = "I'm private, so what?"
 
+  
   
 ```
 
@@ -132,7 +138,8 @@ testIncludeField = "I'm private, but here we are.."
 <td valign="top">
 
 ```c#
-// Designates a property to be ignored by the Tommy processor
+// Designates a property to be ignored 
+// by the Tommy processor
 [TommyIgnore]
 public string TestIgnoreProperty { get; set; }
 ```
@@ -143,6 +150,7 @@ public string TestIgnoreProperty { get; set; }
 ```toml
  
 
+  
   
 ```
 

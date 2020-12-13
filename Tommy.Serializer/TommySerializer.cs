@@ -12,7 +12,6 @@ using System.Linq;
 using System.Reflection;
 
 // ReSharper disable MemberCanBePrivate.Global
-
 // ReSharper disable ClassNeverInstantiated.Global
 // ReSharper disable PatternAlwaysOfType
 
