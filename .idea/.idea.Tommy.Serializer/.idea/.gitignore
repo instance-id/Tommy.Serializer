@@ -2,12 +2,12 @@
 /shelf/
 /workspace.xml
 # Rider ignored files
-/projectSettingsUpdater.xml
-/.idea.Tommy.Serializer.iml
 /modules.xml
+/.idea.Tommy.Serializer.iml
+/projectSettingsUpdater.xml
 /contentModel.xml
 # Datasource local storage ignored files
-/../../../../../../../../:\GitHub\instance-id\Tommy.Serializer.Fix\Tommy.Serializer\.idea\.idea.Tommy.Serializer\.idea/dataSources/
+/../../../../../../../../../:\Users\mosthated\source\repos\Tommy.Serializer\.idea\.idea.Tommy.Serializer\.idea/dataSources/
 /dataSources.local.xml
 # Editor-based HTTP Client requests
 /httpRequests/

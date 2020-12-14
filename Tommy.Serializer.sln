@@ -1,10 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tommy.Serializer", "Tommy.Serializer\Tommy.Serializer.csproj", "{B1C2720B-5C57-4B3C-83AF-17D496863659}"
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tommy.Serializer", "Tommy.Serializer\Tommy.Serializer.csproj", "{F3107DBB-2A1D-4271-B75E-278631023FA9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tommy.Serializer.Demo", "Tommy.Serializer.Demo\Tommy.Serializer.Demo.csproj", "{29EE5896-5DF5-4693-A51E-23CFB9D4B0AF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tommy.Serializer.Demo", "Tommy.Serializer.Demo\Tommy.Serializer.Demo.csproj", "{552DE554-7561-4BCC-B8CD-631ECEF603E6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tommy.Serializer.Tests", "Tommy.Serializer.Tests\Tommy.Serializer.Tests.csproj", "{A88F8314-0779-4629-A0E3-C2EA0BFB0A98}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tommy.Serializer.Tests", "Tommy.Serializer.Tests\Tommy.Serializer.Tests.csproj", "{0CC7B663-90BE-438B-AC2A-D2B4EE85D97F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,17 +15,23 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B1C2720B-5C57-4B3C-83AF-17D496863659}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B1C2720B-5C57-4B3C-83AF-17D496863659}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B1C2720B-5C57-4B3C-83AF-17D496863659}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B1C2720B-5C57-4B3C-83AF-17D496863659}.Release|Any CPU.Build.0 = Release|Any CPU
-		{29EE5896-5DF5-4693-A51E-23CFB9D4B0AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{29EE5896-5DF5-4693-A51E-23CFB9D4B0AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{29EE5896-5DF5-4693-A51E-23CFB9D4B0AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{29EE5896-5DF5-4693-A51E-23CFB9D4B0AF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A88F8314-0779-4629-A0E3-C2EA0BFB0A98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A88F8314-0779-4629-A0E3-C2EA0BFB0A98}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A88F8314-0779-4629-A0E3-C2EA0BFB0A98}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A88F8314-0779-4629-A0E3-C2EA0BFB0A98}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3107DBB-2A1D-4271-B75E-278631023FA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3107DBB-2A1D-4271-B75E-278631023FA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3107DBB-2A1D-4271-B75E-278631023FA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3107DBB-2A1D-4271-B75E-278631023FA9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{552DE554-7561-4BCC-B8CD-631ECEF603E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{552DE554-7561-4BCC-B8CD-631ECEF603E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{552DE554-7561-4BCC-B8CD-631ECEF603E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{552DE554-7561-4BCC-B8CD-631ECEF603E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CC7B663-90BE-438B-AC2A-D2B4EE85D97F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CC7B663-90BE-438B-AC2A-D2B4EE85D97F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CC7B663-90BE-438B-AC2A-D2B4EE85D97F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CC7B663-90BE-438B-AC2A-D2B4EE85D97F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {90E8FE10-25E5-448F-B786-65FADE64A17C}
 	EndGlobalSection
 EndGlobal
