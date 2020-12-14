@@ -44,7 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TommySerialization.cs" />
+    <Compile Include="TommySerializer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
