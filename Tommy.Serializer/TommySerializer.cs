@@ -14,7 +14,7 @@ using System.Reflection;
 // ReSharper disable ClassNeverInstantiated.Global
 // ReSharper disable MemberCanBePrivate.Global
 
-namespace Tommy
+namespace Tommy.Serializer
 {
     /// <summary>
     /// A class to enable (De)Serialization of a class instance to/from disk
