@@ -10,7 +10,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Tommy;
+
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace Tommy.Serializer
 {
@@ -58,7 +59,9 @@ namespace Tommy.Serializer
 
                     // -- Check object for table name attribute --------------------
                     //string tableName = Attribute.GetCustomAttribute(type, typeof(TommyTableName)).;
-                    string tableName = type.GetCustomAttribute<TommyTableName>().TableName;
+                    string tableName = type.GetCustomAttribute<TommyTableName>()?.TableName;
+                    // var tableTest =  type.GetCustomAttribute<TommyTableName>();
+                    // var tName = tableTest;
 
                     // -- Iterate the properties of the object ---------------------
                     PropertyInfo[] properties = type.GetProperties(bindingFlags);
@@ -153,7 +156,8 @@ namespace Tommy.Serializer
                 if (!property.PropertyType.IsPublic && !Attribute.IsDefined(property, typeof(TommyInclude))) continue;
 
                 // -- Check if property has comment attribute --------------
-                var comment = property.PropertyType.GetCustomAttribute<TommyComment>()?.Value;
+                var propType = property.GetType();
+                var comment =  (Attribute.GetCustomAttributes(property, typeof(TommyComment), false).FirstOrDefault() as TommyComment)?.Value;
                 // -- Check if property has SortOrder attribute ------------
                 var sortOrder = property.PropertyType.GetCustomAttribute<TommySortOrder>()?.SortOrder;
                 var propertyValue = data.GetPropertyValue(property.Name);
@@ -204,6 +208,11 @@ namespace Tommy.Serializer
                     tomlData.Add(new SortNode {Name = property.Name, SortOrder = sortOrder ?? -1, Value = tomlArray});
                 }
             }
+        }
+
+        private static object GetCustomAttribute(this Attribute type, Type type1, PropertyInfo property)
+        {
+            return null;
         }
 
         internal static void ProcessPropertiesFromFile(TomlNode tableData, List<string> tableKeys, PropertyInfo[] properties, object dataClass)
@@ -283,7 +292,7 @@ namespace Tommy.Serializer
                     var typeValue = fieldValue as IDictionary;
                     if (typeValue == null) continue;
 
-                    var dictTypeArguments  = fieldType.IsGenericType && !fieldType.IsGenericTypeDefinition
+                    var dictTypeArguments = fieldType.IsGenericType && !fieldType.IsGenericTypeDefinition
                         ? fieldType.GetGenericArguments()
                         : Type.EmptyTypes;
 
@@ -446,9 +455,25 @@ namespace Tommy.Serializer
         public static T GetCustomAttribute<T>(this Type type) where T : Attribute
         {
             // Send inherit as false if you want the attribute to be searched only on the type. If you want to search the complete inheritance hierarchy, set the parameter to true.
-            object[] attributes = type.GetCustomAttributes(false);
+            object[] attributes = type.GetCustomAttributes(typeof(T), false);
             return attributes.OfType<T>().FirstOrDefault();
         }
+
+        public static T GetAttribute<T>(Type rObjectType)
+        {
+#if !UNITY_EDITOR && (NETFX_CORE || WINDOWS_UWP || UNITY_WP8 || UNITY_WP_8_1 || UNITY_WSA || UNITY_WSA_8_0 || UNITY_WSA_8_1 || UNITY_WSA_10_0)
+            System.Collections.Generic.IEnumerable<System.Attribute> lInitialAttributes = rObjectType.GetTypeInfo().GetCustomAttributes(typeof(T), true);
+            object[] lAttributes = lInitialAttributes.ToArray();
+#else
+            var lAttributes = rObjectType.GetCustomAttributes(typeof(T), true);
+#endif
+            if (lAttributes == null || lAttributes.Length == 0)
+            {
+                return default(T);
+            }
+
+            return (T) lAttributes[0];
+        } // @formatter:on
 
         #endregion
 
@@ -486,11 +511,11 @@ namespace Tommy.Serializer
         {
             return node switch
             {
-                TomlNode {IsBoolean: true}  => node.AsBoolean.Value,
-                TomlNode {IsString: true}   => node.AsString.Value,
-                TomlNode {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, typeCode),
-                TomlNode {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, typeCode),
-                TomlNode {IsDateTime: true} => node.AsDateTime.Value,
+                {IsBoolean: true}  => node.AsBoolean.Value,
+                {IsString: true}   => node.AsString.Value,
+                {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, typeCode),
+                {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, typeCode),
+                {IsDateTime: true} => node.AsDateTime.Value,
                 _ => throw new ArgumentOutOfRangeException(nameof(node), node, null)
             };  // @formatter:on
         }
@@ -499,26 +524,26 @@ namespace Tommy.Serializer
         {
             return node switch
             {
-                TomlNode {IsBoolean: true}  => node.AsBoolean.Value,
-                TomlNode {IsString: true}   => node.AsString.Value,
-                TomlNode {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, propertyType),
-                TomlNode {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, propertyType),
-                TomlNode {IsDateTime: true} => node.AsDateTime.Value,
+                {IsBoolean: true}  => node.AsBoolean.Value,
+                {IsString: true}   => node.AsString.Value,
+                {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, propertyType),
+                {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, propertyType),
+                {IsDateTime: true} => node.AsDateTime.Value,
                 _ => throw new ArgumentOutOfRangeException(nameof(node), node, null)
             }; // @formatter:on
         }
 
         internal static TomlNode GetTomlNode(this object obj, Type valueType = null)
         {
-            if (valueType == null) valueType = obj.GetType();
+            valueType ??= obj.GetType();
 
             return valueType switch
             {
-                Type v when v == typeof(bool) => new TomlBoolean {Value = (bool) obj},
-                Type v when v == typeof(string) => new TomlString {Value = (string) obj != null ? obj.ToString() : ""},
-                Type v when v.IsFloat() => new TomlFloat {Value = FloatConverter(valueType, obj)},
-                Type v when v.IsInteger() => new TomlInteger {Value = (long) Convert.ChangeType(obj, TypeCode.Int64)},
-                Type v when v == typeof(DateTime) => new TomlDateTime {Value = (DateTime) obj},
+                { } v when v == typeof(bool) => new TomlBoolean {Value = (bool) obj},
+                { } v when v == typeof(string) => new TomlString {Value = (string) obj != null ? obj.ToString() : ""},
+                { } v when v.IsFloat() => new TomlFloat {Value = FloatConverter(valueType, obj)},
+                { } v when v.IsInteger() => new TomlInteger {Value = (long) Convert.ChangeType(obj, TypeCode.Int64)},
+                { } v when v == typeof(DateTime) => new TomlDateTime {Value = (DateTime) obj},
                 _ => throw new Exception($"Was not able to process item {valueType.Name}")
             }; // @formatter:on
         }
@@ -571,8 +596,8 @@ namespace Tommy.Serializer
             if (dictionaryKeys != null && dictionaryValues != null)
                 for (var i = 0; i < dictionaryKeys.ChildrenCount; i++)
                 {
-                    TypeCode keyTypeCode =  (TypeCode) Enum.Parse(typeof(TypeCode), valueType[0].Name);
-                    TypeCode valueTypeCode= (TypeCode) Enum.Parse(typeof(TypeCode), valueType[1].Name);
+                    TypeCode keyTypeCode = (TypeCode) Enum.Parse(typeof(TypeCode), valueType[0].Name);
+                    TypeCode valueTypeCode = (TypeCode) Enum.Parse(typeof(TypeCode), valueType[1].Name);
                     dictionary.Add(GetNodeValue(dictionaryKeys[i], keyTypeCode), GetNodeValue(dictionaryValues[i], valueTypeCode));
                 }
             else
@@ -615,6 +640,7 @@ namespace Tommy.Serializer
     }
 
     #region Data Types
+
     internal struct SortNode
     {
         public string Name { get; set; }
