@@ -171,16 +171,16 @@ namespace Tommy.Serializer.Tests
         //         yield return new object[] {typeof(TomlDateTime), DateTime.Parse("2020-12-12 15:36:16")};
         //         yield return new object[] {typeof(TomlString), "String Data"};
         //     }
-        // } // @formatter:on
+        // } // @formatter:on1
 
         public static IEnumerable<object[]> SortNodeData // @formatter:off
         {
             get { yield return new object[] {new SortNode[] {
-                new() { Name = "boolField",   SortOrder = -1, Value = new TomlBoolean  { Comment = "Comment for bool",   Value = true}},
-                new() { Name = "stringField", SortOrder = 2,  Value = new TomlString   { Comment = "Comment for string", Value = "String Value s"}},
-                new() { Name = "floatField",  SortOrder = 1,  Value = new TomlFloat    { Comment = "Comment for float",  Value = 1.432f}},
-                new() { Name = "intField",    SortOrder = 0,  Value = new TomlInteger  { Comment = "Comment for int",    Value = 6}},
-                new() { Name = "dateField",   SortOrder = -1, Value = new TomlDateTime { Comment = "Comment for Date",   Value =
+                new SortNode { Name = "boolField",   SortOrder = -1, Value = new TomlBoolean  { Comment = "Comment for bool",   Value = true}},
+                new SortNode { Name = "stringField", SortOrder = 2,  Value = new TomlString   { Comment = "Comment for string", Value = "String Value s"}},
+                new SortNode { Name = "floatField",  SortOrder = 1,  Value = new TomlFloat    { Comment = "Comment for float",  Value = 1.432f}},
+                new SortNode { Name = "intField",    SortOrder = 0,  Value = new TomlInteger  { Comment = "Comment for int",    Value = 6}},
+                new SortNode { Name = "dateField",   SortOrder = -1, Value = new TomlDateTime { Comment = "Comment for Date",   Value =
                     DateTime.Parse("2020-12-12 15:36:16")}}}}; }
         } // @formatter:on
 

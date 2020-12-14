@@ -6,16 +6,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-
-// ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ClassNeverInstantiated.Global
-// ReSharper disable PatternAlwaysOfType
+// ReSharper disable MemberCanBePrivate.Global
 
-namespace Tommy.Serializer
+namespace Tommy
 {
     /// <summary>
     /// A class to enable (De)Serialization of a class instance to/from disk
@@ -60,7 +57,10 @@ namespace Tommy.Serializer
                     Type type = data.GetType();
 
                     // -- Check object for table name attribute --------------------
+                    //string tableName = Attribute.GetCustomAttribute(type, typeof(TommyTableName)).;
                     string tableName = type.GetCustomAttribute<TommyTableName>()?.TableName;
+                    // var tableTest =  type.GetCustomAttribute<TommyTableName>();
+                    // var tName = tableTest;
 
                     // -- Iterate the properties of the object ---------------------
                     PropertyInfo[] properties = type.GetProperties(bindingFlags);
@@ -155,9 +155,10 @@ namespace Tommy.Serializer
                 if (!property.PropertyType.IsPublic && !Attribute.IsDefined(property, typeof(TommyInclude))) continue;
 
                 // -- Check if property has comment attribute --------------
-                var comment = property.GetCustomAttribute<TommyComment>()?.Value;
+                 var comment =  (Attribute.GetCustomAttributes(property, typeof(TommyComment), false).FirstOrDefault() as TommyComment)?.Value;
                 // -- Check if property has SortOrder attribute ------------
-                var sortOrder = property.GetCustomAttribute<TommySortOrder>()?.SortOrder;
+                var sortOrder =  (Attribute.GetCustomAttributes(property, typeof(TommySortOrder), false).FirstOrDefault() as TommySortOrder)?.SortOrder;
+                // var sortOrder = property.PropertyType.GetCustomAttribute<TommySortOrder>()?.SortOrder;
                 var propertyValue = data.GetPropertyValue(property.Name);
                 var propertyType = property.PropertyType;
 
@@ -176,7 +177,11 @@ namespace Tommy.Serializer
                     var typeValue = propertyValue as IDictionary;
                     if (typeValue == null) continue;
 
-                    var dictTypeArguments = typeValue.GetType().GenericTypeArguments;
+                    var dictTypeArguments = propertyType.IsGenericType && !propertyType.IsGenericTypeDefinition
+                        ? propertyType.GetGenericArguments()
+                        : Type.EmptyTypes;
+
+                    // var dictTypeArguments = typeValue.GetType().GenericTypeArguments;
                     var kType = dictTypeArguments[0];
                     var vType = dictTypeArguments[1];
 
@@ -259,10 +264,11 @@ namespace Tommy.Serializer
                 if (!field.FieldType.IsPublic && !Attribute.IsDefined(field, typeof(TommyInclude)) || field.Name.Contains("k__BackingField")) continue;
 
                 // -- Check if field has comment attribute ---------------
-                var comment = field.GetCustomAttribute<TommyComment>()?.Value;
+                var comment =  (Attribute.GetCustomAttributes(field, typeof(TommyComment), false).FirstOrDefault() as TommyComment)?.Value;
 
                 // -- Check if property has SortOrder attribute ----------
-                var sortOrder = field.GetCustomAttribute<TommySortOrder>()?.SortOrder;
+                var sortOrder =  (Attribute.GetCustomAttributes(field, typeof(TommySortOrder), false).FirstOrDefault() as TommySortOrder)?.SortOrder;
+                // var sortOrder = field.FieldType.GetCustomAttribute<TommySortOrder>()?.SortOrder;
                 var fieldValue = data.GetFieldValue(field.Name);
                 var fieldType = field.FieldType;
 
@@ -281,7 +287,10 @@ namespace Tommy.Serializer
                     var typeValue = fieldValue as IDictionary;
                     if (typeValue == null) continue;
 
-                    var dictTypeArguments = typeValue.GetType().GenericTypeArguments;
+                    var dictTypeArguments = fieldType.IsGenericType && !fieldType.IsGenericTypeDefinition
+                        ? fieldType.GetGenericArguments()
+                        : Type.EmptyTypes;
+
                     var kType = dictTypeArguments[0];
                     var vType = dictTypeArguments[1];
 
@@ -353,7 +362,6 @@ namespace Tommy.Serializer
 
         #region I/O
 
-        [ExcludeFromCodeCoverage]
         internal static void WriteToDisk(TomlTable tomlTable, string path)
         {
             // @formatter:off -- Writes the Toml file to disk ------------
@@ -363,7 +371,6 @@ namespace Tommy.Serializer
             catch (Exception e) { Console.WriteLine(e); throw; }
         } // @formatter:on
 
-        [ExcludeFromCodeCoverage]
         internal static MemoryStream WriteToMemory(TomlTable tomlTable)
         {
             // @formatter:off -- Writes the Toml file to disk ------------
@@ -373,7 +380,6 @@ namespace Tommy.Serializer
             } catch (Exception e) { Console.WriteLine(e); throw; }
         } // @formatter:on
 
-        [ExcludeFromCodeCoverage]
         internal static TomlTable ReadFromMemory(MemoryStream memoryStream)
         {
             // @formatter:off  -- Read the Toml file from Memory ------------
@@ -383,7 +389,6 @@ namespace Tommy.Serializer
             catch (Exception e) { Console.WriteLine(e); throw; }
         } // @formatter:on
 
-        [ExcludeFromCodeCoverage]
         internal static TomlTable ReadFromDisk(string path)
         {
             // @formatter:off -- Read the Toml file from Disk ------------
@@ -442,6 +447,13 @@ namespace Tommy.Serializer
             type == typeof(ulong);
         // @formatter:on
 
+        internal static T GetCustomAttribute<T>(this Type type) where T : Attribute
+        {
+            // Send inherit as false if you want the attribute to be searched only on the type. If you want to search the complete inheritance hierarchy, set the parameter to true.
+            object[] attributes = type.GetCustomAttributes(typeof(T), false);
+            return attributes.OfType<T>().FirstOrDefault();
+        }
+
         #endregion
 
         #region Property/Field Get/Set
@@ -450,7 +462,7 @@ namespace Tommy.Serializer
             src.GetType().GetProperty(propName, bindingFlags)?.GetValue(src, null);
 
         internal static void SetPropertyValue<T>(this object src, string propName, T propValue) =>
-            src.GetType().GetProperty(propName, bindingFlags)?.SetValue(src, propValue);
+            src.GetType().GetProperty(propName, bindingFlags)?.SetValue(src, propValue, null);
 
         internal static object GetFieldValue(this object src, string fieldName) =>
             src.GetType().GetField(fieldName, bindingFlags)?.GetValue(src);
@@ -478,11 +490,11 @@ namespace Tommy.Serializer
         {
             return node switch
             {
-                TomlNode {IsBoolean: true}  => node.AsBoolean.Value,
-                TomlNode {IsString: true}   => node.AsString.Value,
-                TomlNode {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, typeCode),
-                TomlNode {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, typeCode),
-                TomlNode {IsDateTime: true} => node.AsDateTime.Value,
+                {IsBoolean: true}  => node.AsBoolean.Value,
+                {IsString: true}   => node.AsString.Value,
+                {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, typeCode),
+                {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, typeCode),
+                {IsDateTime: true} => node.AsDateTime.Value,
                 _ => throw new ArgumentOutOfRangeException(nameof(node), node, null)
             };  // @formatter:on
         }
@@ -491,26 +503,26 @@ namespace Tommy.Serializer
         {
             return node switch
             {
-                TomlNode {IsBoolean: true}  => node.AsBoolean.Value,
-                TomlNode {IsString: true}   => node.AsString.Value,
-                TomlNode {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, propertyType),
-                TomlNode {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, propertyType),
-                TomlNode {IsDateTime: true} => node.AsDateTime.Value,
+                {IsBoolean: true}  => node.AsBoolean.Value,
+                {IsString: true}   => node.AsString.Value,
+                {IsFloat: true}    => Convert.ChangeType(node.AsFloat.Value, propertyType),
+                {IsInteger: true}  => Convert.ChangeType(node.AsInteger.Value, propertyType),
+                {IsDateTime: true} => node.AsDateTime.Value,
                 _ => throw new ArgumentOutOfRangeException(nameof(node), node, null)
             }; // @formatter:on
         }
 
         internal static TomlNode GetTomlNode(this object obj, Type valueType = null)
         {
-            if (valueType == null) valueType = obj.GetType();
+            valueType ??= obj.GetType();
 
             return valueType switch
             {
-                Type v when v == typeof(bool) => new TomlBoolean {Value = (bool) obj},
-                Type v when v == typeof(string) => new TomlString {Value = (string) obj != null ? obj.ToString() : ""},
-                Type v when v.IsFloat() => new TomlFloat {Value = FloatConverter(valueType, obj)},
-                Type v when v.IsInteger() => new TomlInteger {Value = (long) Convert.ChangeType(obj, TypeCode.Int64)},
-                Type v when v == typeof(DateTime) => new TomlDateTime {Value = (DateTime) obj},
+                { } v when v == typeof(bool) => new TomlBoolean {Value = (bool) obj},
+                { } v when v == typeof(string) => new TomlString {Value = (string) obj != null ? obj.ToString() : ""},
+                { } v when v.IsFloat() => new TomlFloat {Value = FloatConverter(valueType, obj)},
+                { } v when v.IsInteger() => new TomlInteger {Value = (long) Convert.ChangeType(obj, TypeCode.Int64)},
+                { } v when v == typeof(DateTime) => new TomlDateTime {Value = (DateTime) obj},
                 _ => throw new Exception($"Was not able to process item {valueType.Name}")
             }; // @formatter:on
         }
@@ -535,7 +547,7 @@ namespace Tommy.Serializer
             {
                 if (value == null) continue;
 
-                Enum.TryParse(valueType.Name, out TypeCode typeCode);
+                var typeCode = (TypeCode) Enum.Parse(typeof(TypeCode), valueType.Name);
                 var nodeValue = value.GetNodeValue(typeCode);
                 if (nodeValue != null) list.Add(nodeValue);
                 else Console.WriteLine(new Exception($"{propertyType.Name} value is null. This is unacceptable."));
@@ -563,8 +575,8 @@ namespace Tommy.Serializer
             if (dictionaryKeys != null && dictionaryValues != null)
                 for (var i = 0; i < dictionaryKeys.ChildrenCount; i++)
                 {
-                    Enum.TryParse(valueType[0].Name, out TypeCode keyTypeCode);
-                    Enum.TryParse(valueType[1].Name, out TypeCode valueTypeCode);
+                    TypeCode keyTypeCode = (TypeCode) Enum.Parse(typeof(TypeCode), valueType[0].Name);
+                    TypeCode valueTypeCode = (TypeCode) Enum.Parse(typeof(TypeCode), valueType[1].Name);
                     dictionary.Add(GetNodeValue(dictionaryKeys[i], keyTypeCode), GetNodeValue(dictionaryValues[i], valueTypeCode));
                 }
             else
