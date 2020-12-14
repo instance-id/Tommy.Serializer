@@ -3,7 +3,6 @@
 // -- instance.id 2020 | http://github.com/instance-id | http://instance.id  --
 // ----------------------------------------------------------------------------
 
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -27,10 +26,8 @@ namespace Tommy.Serializer
         /// <param name="data">The class instance in which the properties will be used to create a Toml file </param>
         /// <param name="path">The destination path in which to create the Toml file</param>
         /// <param name="writeToMemory">Write to <see cref="System.IO.MemoryStream"/>. If omitted, a standard <see cref="System.IO.StreamWriter"/> will be used. </param>
-        public static MemoryStream ToTomlFile(object data, string path, bool writeToMemory = false)
-        {
-            return ToTomlFile(new[] {data}, path, writeToMemory);
-        }
+        public static MemoryStream ToTomlFile(object data, string path, bool writeToMemory = false) =>
+            ToTomlFile(new[] {data}, path, writeToMemory);
 
         /// <summary>
         /// Reflectively determines the property types and values of the passed class instance and outputs a Toml file
@@ -59,10 +56,7 @@ namespace Tommy.Serializer
                     Type type = data.GetType();
 
                     // -- Check object for table name attribute --------------------
-                    //string tableName = Attribute.GetCustomAttribute(type, typeof(TommyTableName)).;
                     string tableName = type.GetCustomAttribute<TommyTableName>()?.TableName;
-                    // var tableTest =  type.GetCustomAttribute<TommyTableName>();
-                    // var tName = tableTest;
 
                     // -- Iterate the properties of the object ---------------------
                     PropertyInfo[] properties = type.GetProperties(bindingFlags);
