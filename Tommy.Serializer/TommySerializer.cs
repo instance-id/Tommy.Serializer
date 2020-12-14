@@ -1,7 +1,8 @@
-﻿// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // -- Project : https://github.com/instance-id/Tommy.Serializer              --
 // -- instance.id 2020 | http://github.com/instance-id | http://instance.id  --
 // ----------------------------------------------------------------------------
+
 
 using System;
 using System.Collections;
@@ -207,6 +208,11 @@ namespace Tommy
                     tomlData.Add(new SortNode {Name = property.Name, SortOrder = sortOrder ?? -1, Value = tomlArray});
                 }
             }
+        }
+
+        private static object GetCustomAttribute(this Attribute type, Type type1, PropertyInfo property)
+        {
+            return null;
         }
 
         internal static void ProcessPropertiesFromFile(TomlNode tableData, List<string> tableKeys, PropertyInfo[] properties, object dataClass)
