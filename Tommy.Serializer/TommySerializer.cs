@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+
 // ReSharper disable ClassNeverInstantiated.Global
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -48,9 +49,9 @@ namespace Tommy
             TomlTable tomlTable = new TomlTable();
             bool isMultiObject = datas.Length > 1;
 
-            for (var t = 0; t < datas.Length; t++)
+            for (int t = 0; t < datas.Length; t++)
             {
-                var data = datas[t];
+                object data = datas[t];
                 try
                 {
                     List<SortNode> tomlData = new List<SortNode>();
@@ -75,7 +76,7 @@ namespace Tommy
                     // -- Properties that do not have a sort attribute are ---------
                     // -- given a sort order of the max sort int +1 and ------------
                     // -- appear after the sorted properties -----------------------
-                    var maxSortInt = (from l in tomlData select l.SortOrder).Max();
+                    int maxSortInt = (from l in tomlData select l.SortOrder).Max();
                     if (maxSortInt > -1) tomlData = tomlData.SortNodes(maxSortInt);
 
                     tomlData.ForEach(n => { tomlDataTable[n.Name] = n.Value; });
@@ -147,27 +148,26 @@ namespace Tommy
 
         internal static void ProcessPropertiesToFile(object data, PropertyInfo[] properties, ref List<SortNode> tomlData)
         {
-            foreach (var property in properties)
+            foreach (PropertyInfo property in properties)
             {
-                // -- Check if property is to be ignored -------------------
-                // -- If so, continue on to the next property --------------
+                // -- Check for included/ignored properties ----------------
                 if (Attribute.IsDefined(property, typeof(TommyIgnore))) continue;
-
                 if (!property.PropertyType.IsPublic && !Attribute.IsDefined(property, typeof(TommyInclude))) continue;
 
                 // -- Check if property has comment attribute --------------
-                 var comment =  (Attribute.GetCustomAttributes(property, typeof(TommyComment), false).FirstOrDefault() as TommyComment)?.Value;
+                string comment = (Attribute.GetCustomAttributes(property, typeof(TommyComment), false).FirstOrDefault() as TommyComment)?.Value;
+
                 // -- Check if property has SortOrder attribute ------------
-                var sortOrder =  (Attribute.GetCustomAttributes(property, typeof(TommySortOrder), false).FirstOrDefault() as TommySortOrder)?.SortOrder;
-                // var sortOrder = property.PropertyType.GetCustomAttribute<TommySortOrder>()?.SortOrder;
+                int? sortOrder = (Attribute.GetCustomAttributes(property, typeof(TommySortOrder), false).FirstOrDefault() as TommySortOrder)?.SortOrder;
+
                 var propertyValue = data.GetPropertyValue(property.Name);
-                var propertyType = property.PropertyType;
+                Type propertyType = property.PropertyType;
 
                 // -- Check each property type in order to
                 // -- determine which type of TomlNode to create
                 if (propertyType == typeof(string) || (propertyType.GetInterface(nameof(IEnumerable)) == null && !propertyType.IsArray))
                 {
-                    var valueNode = GetTomlNode(propertyValue, propertyType);
+                    TomlNode valueNode = GetTomlNode(propertyValue, propertyType);
                     valueNode.Comment = comment;
 
                     tomlData.Add(new SortNode {Name = property.Name, SortOrder = sortOrder ?? -1, Value = valueNode});
@@ -175,31 +175,31 @@ namespace Tommy
 
                 else if (propertyType.GetInterface(nameof(IEnumerable)) != null && propertyType.GetInterface(nameof(IDictionary)) != null)
                 {
-                    var typeValue = propertyValue as IDictionary;
+                    IDictionary typeValue = propertyValue as IDictionary;
                     if (typeValue == null) continue;
 
-                    var dictTypeArguments = propertyType.IsGenericType && !propertyType.IsGenericTypeDefinition
+                    Type[] dictTypeArguments = propertyType.IsGenericType && !propertyType.IsGenericTypeDefinition
                         ? propertyType.GetGenericArguments()
                         : Type.EmptyTypes;
 
                     // var dictTypeArguments = typeValue.GetType().GenericTypeArguments;
-                    var kType = dictTypeArguments[0];
-                    var vType = dictTypeArguments[1];
+                    Type kType = dictTypeArguments[0];
+                    Type vType = dictTypeArguments[1];
 
-                    var dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, propertyType);
+                    TomlNode dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, propertyType);
                     dictionaryNode.Comment = comment;
 
                     tomlData.Add(new SortNode {Name = property.Name, SortOrder = sortOrder ?? -1, Value = dictionaryNode});
                 }
                 else
                 {
-                    var propAsList = propertyValue as IList;
-                    var tomlArray = new TomlArray {Comment = comment}; // @formatter:off
-                            var propArgType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
+                    IList propAsList = propertyValue as IList;
+                    TomlArray tomlArray = new TomlArray {Comment = comment}; // @formatter:off
+                            Type propArgType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
 
                             if (propAsList == null) { Console.WriteLine($"{property.Name} could not be cast as IList."); continue; } // @formatter:on
 
-                    for (var i = 0; i < propAsList.Count; i++)
+                    for (int i = 0; i < propAsList.Count; i++)
                     {
                         if (propAsList[i] == null) throw new ArgumentNullException($"Error: collection value cannot be null");
                         tomlArray.Add(GetTomlNode(propAsList[i], propArgType));
@@ -210,17 +210,12 @@ namespace Tommy
             }
         }
 
-        private static object GetCustomAttribute(this Attribute type, Type type1, PropertyInfo property)
-        {
-            return null;
-        }
-
         internal static void ProcessPropertiesFromFile(TomlNode tableData, List<string> tableKeys, PropertyInfo[] properties, object dataClass)
         {
             for (int k = 0; k < tableKeys.Count; k++)
             {
                 string key = tableKeys[k];
-                var property = properties.FirstOrDefault(x => x.Name == key);
+                PropertyInfo property = properties.FirstOrDefault(x => x.Name == key);
                 if (property == null) continue;
 
                 Type propertyType = property.PropertyType;
@@ -261,28 +256,26 @@ namespace Tommy
 
         internal static void ProcessFieldsToFile(object data, FieldInfo[] fields, ref List<SortNode> tomlData)
         {
-            foreach (var field in fields)
+            foreach (FieldInfo field in fields)
             {
-                // -- Check if property is to be ignored -----------------
-                // -- If so, continue on to the next property ------------
+                // -- Check for included/ignored fields ------------------
                 if (Attribute.IsDefined(field, typeof(TommyIgnore))) continue;
-
                 if (!field.FieldType.IsPublic && !Attribute.IsDefined(field, typeof(TommyInclude)) || field.Name.Contains("k__BackingField")) continue;
 
                 // -- Check if field has comment attribute ---------------
-                var comment =  (Attribute.GetCustomAttributes(field, typeof(TommyComment), false).FirstOrDefault() as TommyComment)?.Value;
+                string comment = (Attribute.GetCustomAttributes(field, typeof(TommyComment), false).FirstOrDefault() as TommyComment)?.Value;
 
                 // -- Check if property has SortOrder attribute ----------
-                var sortOrder =  (Attribute.GetCustomAttributes(field, typeof(TommySortOrder), false).FirstOrDefault() as TommySortOrder)?.SortOrder;
-                // var sortOrder = field.FieldType.GetCustomAttribute<TommySortOrder>()?.SortOrder;
+                int? sortOrder = (Attribute.GetCustomAttributes(field, typeof(TommySortOrder), false).FirstOrDefault() as TommySortOrder)?.SortOrder;
+
                 var fieldValue = data.GetFieldValue(field.Name);
-                var fieldType = field.FieldType;
+                Type fieldType = field.FieldType;
 
                 // -- Check each property type in order to
                 // -- determine which type of TomlNode to create
                 if (fieldType == typeof(string) || (fieldType.GetInterface(nameof(IEnumerable)) == null && !fieldType.IsArray))
                 {
-                    var valueNode = GetTomlNode(fieldValue, fieldType);
+                    TomlNode valueNode = GetTomlNode(fieldValue, fieldType);
                     valueNode.Comment = comment;
 
                     tomlData.Add(new SortNode {Name = field.Name, SortOrder = sortOrder ?? -1, Value = valueNode});
@@ -290,30 +283,30 @@ namespace Tommy
 
                 else if (fieldType.GetInterface(nameof(IEnumerable)) != null && fieldType.GetInterface(nameof(IDictionary)) != null)
                 {
-                    var typeValue = fieldValue as IDictionary;
+                    IDictionary typeValue = fieldValue as IDictionary;
                     if (typeValue == null) continue;
 
-                    var dictTypeArguments = fieldType.IsGenericType && !fieldType.IsGenericTypeDefinition
+                    Type[] dictTypeArguments = fieldType.IsGenericType && !fieldType.IsGenericTypeDefinition
                         ? fieldType.GetGenericArguments()
                         : Type.EmptyTypes;
 
-                    var kType = dictTypeArguments[0];
-                    var vType = dictTypeArguments[1];
+                    Type kType = dictTypeArguments[0];
+                    Type vType = dictTypeArguments[1];
 
-                    var dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, fieldType);
+                    TomlNode dictionaryNode = CreateTomlDictionary(kType, vType, typeValue, fieldType);
                     dictionaryNode.Comment = comment;
 
                     tomlData.Add(new SortNode {Name = field.Name, SortOrder = sortOrder ?? -1, Value = dictionaryNode});
                 }
                 else
                 {
-                    var propAsList = fieldValue as IList;
-                    var tomlArray = new TomlArray {Comment = comment}; // @formatter:off
-                            var propArgType = fieldType.GetElementType() ?? fieldType.GetGenericArguments().FirstOrDefault();
+                    IList propAsList = fieldValue as IList;
+                    TomlArray tomlArray = new TomlArray {Comment = comment}; // @formatter:off
+                            Type propArgType = fieldType.GetElementType() ?? fieldType.GetGenericArguments().FirstOrDefault();
 
                             if (propAsList == null) { Console.WriteLine($"{field.Name} could not be cast as IList."); continue; } // @formatter:on
 
-                    for (var i = 0; i < propAsList.Count; i++)
+                    for (int i = 0; i < propAsList.Count; i++)
                     {
                         if (propAsList[i] == null) throw new ArgumentNullException($"Error: collection value cannot be null");
                         tomlArray.Add(GetTomlNode(propAsList[i], propArgType));
@@ -329,7 +322,7 @@ namespace Tommy
             for (int k = 0; k < tableKeys.Count; k++)
             {
                 string key = tableKeys[k];
-                var field = fields.FirstOrDefault(x => x.Name == key);
+                FieldInfo field = fields.FirstOrDefault(x => x.Name == key);
                 if (field == null) continue;
 
                 Type fieldType = field.FieldType;
@@ -371,7 +364,7 @@ namespace Tommy
         internal static void WriteToDisk(TomlTable tomlTable, string path)
         {
             // @formatter:off -- Writes the Toml file to disk ------------
-            try { using (var writer = new StreamWriter(path, false))
+            try { using (StreamWriter writer = new StreamWriter(path, false))
                 { tomlTable.WriteTo(writer); writer.Flush(); }
                 Console.WriteLine($"File saved to: {path}"); }
             catch (Exception e) { Console.WriteLine(e); throw; }
@@ -380,8 +373,8 @@ namespace Tommy
         internal static MemoryStream WriteToMemory(TomlTable tomlTable)
         {
             // @formatter:off -- Writes the Toml file to disk ------------
-            try { var streamMem = new MemoryStream();
-                using (var writer = new StreamWriter(streamMem))
+            try { MemoryStream streamMem = new MemoryStream();
+                using (StreamWriter writer = new StreamWriter(streamMem))
                 { tomlTable.WriteTo(writer); writer.Flush(); } return streamMem;
             } catch (Exception e) { Console.WriteLine(e); throw; }
         } // @formatter:on
@@ -416,8 +409,8 @@ namespace Tommy
 
         private static string GetRange(this string s, int startIndex, char stopCharacter) // @formatter:off
         {
-            var substring = "";
-            for (var i = startIndex; i < s.Length; i++) { char c = s[i];
+            string substring = "";
+            for (int i = startIndex; i < s.Length; i++) { char c = s[i];
                 if (c == stopCharacter) break;
                 substring += c;
             } return substring; // @formatter:on
@@ -455,7 +448,6 @@ namespace Tommy
 
         internal static T GetCustomAttribute<T>(this Type type) where T : Attribute
         {
-            // Send inherit as false if you want the attribute to be searched only on the type. If you want to search the complete inheritance hierarchy, set the parameter to true.
             object[] attributes = type.GetCustomAttributes(typeof(T), false);
             return attributes.OfType<T>().FirstOrDefault();
         }
@@ -482,9 +474,9 @@ namespace Tommy
 
         internal static List<SortNode> SortNodes(this List<SortNode> tomlData, int maxSortInt)
         {
-            for (var i = 0; i < tomlData.Count; i++)
+            for (int i = 0; i < tomlData.Count; i++)
             {
-                var n = tomlData[i];
+                SortNode n = tomlData[i];
                 if (n.SortOrder > -1) continue;
                 tomlData[i] = new SortNode {SortOrder = maxSortInt + 1, Value = n.Value, Name = n.Name};
             }
@@ -539,7 +531,7 @@ namespace Tommy
 
         internal static object CreateGenericList(TomlNode[] array, Type propertyType)
         {
-            var valueType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
+            Type valueType = propertyType.GetElementType() ?? propertyType.GetGenericArguments().FirstOrDefault();
             if (valueType == null)
             {
                 Console.WriteLine($"Warning: Could not find argument type for property: {propertyType.Name}.");
@@ -547,14 +539,14 @@ namespace Tommy
             }
 
             Type listType;
-            var list = (IList) Activator.CreateInstance(listType = typeof(List<>).MakeGenericType(valueType));
+            IList list = (IList) Activator.CreateInstance(listType = typeof(List<>).MakeGenericType(valueType));
 
-            foreach (var value in array)
+            foreach (TomlNode value in array)
             {
                 if (value == null) continue;
 
-                var typeCode = (TypeCode) Enum.Parse(typeof(TypeCode), valueType.Name);
-                var nodeValue = value.GetNodeValue(typeCode);
+                TypeCode typeCode = (TypeCode) Enum.Parse(typeof(TypeCode), valueType.Name);
+                object nodeValue = value.GetNodeValue(typeCode);
                 if (nodeValue != null) list.Add(nodeValue);
                 else Console.WriteLine(new Exception($"{propertyType.Name} value is null. This is unacceptable."));
             }
@@ -564,22 +556,22 @@ namespace Tommy
 
         internal static object CreateGenericDictionary(TomlNode tableData, Type propertyType)
         {
-            var valueType = propertyType.GetGenericArguments();
+            Type[] valueType = propertyType.GetGenericArguments();
             if (valueType.Length < 2)
             {
                 Console.WriteLine($"Warning: Could not find argument type for property: {propertyType.Name}.");
                 return null;
             }
 
-            var tableKeys = tableData.AsTable.Keys.ToArray();
+            string[] tableKeys = tableData.AsTable.Keys.ToArray();
 
-            var dictionaryKeys = tableData[tableKeys.FirstOrDefault(x => x.EndsWith("Keys"))].AsArray;
-            var dictionaryValues = tableData[tableKeys.FirstOrDefault(x => x.EndsWith("Values"))].AsArray;
+            TomlArray dictionaryKeys = tableData[tableKeys.FirstOrDefault(x => x.EndsWith("Keys"))].AsArray;
+            TomlArray dictionaryValues = tableData[tableKeys.FirstOrDefault(x => x.EndsWith("Values"))].AsArray;
 
-            var dictionary = (IDictionary) Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(valueType));
+            IDictionary dictionary = (IDictionary) Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(valueType));
 
             if (dictionaryKeys != null && dictionaryValues != null)
-                for (var i = 0; i < dictionaryKeys.ChildrenCount; i++)
+                for (int i = 0; i < dictionaryKeys.ChildrenCount; i++)
                 {
                     TypeCode keyTypeCode = (TypeCode) Enum.Parse(typeof(TypeCode), valueType[0].Name);
                     TypeCode valueTypeCode = (TypeCode) Enum.Parse(typeof(TypeCode), valueType[1].Name);
@@ -598,16 +590,16 @@ namespace Tommy
         {
             TomlTable tomlDataTable = new TomlTable();
 
-            var dictKeys = new TomlArray();
-            var dictValues = new TomlArray();
+            TomlArray dictKeys = new TomlArray();
+            TomlArray dictValues = new TomlArray();
 
             Type kType = tKey as Type;
             Type vType = tValue as Type;
 
-            var dictInstance = (IDictionary) Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(kType, vType));
+            IDictionary dictInstance = (IDictionary) Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(kType, vType));
             dictInstance = dictionary;
 
-            var i = 0;
+            int i = 0;
             foreach (DictionaryEntry kv in dictInstance)
             {
                 dictKeys[i] = GetTomlNode(kv.Key);
