@@ -1,7 +1,6 @@
 
 # Tommy.Serializer
 
-#### NOTE: Work in progress. Not quite fully featured/functional yet.
 The primary goal of this library is to add automatic serialization/deserialization of a class instance to the [Tommy Toml library](https://github.com/dezhidki/Tommy).
 
 ##### (De)Serialization of a class instance to/from a file has been implemented, along with the ability to work with List<primitive>, Primitive[], and basic Dictionary<primitive, primitive>. If more advanced usage is required, just let me know.
